@@ -1,0 +1,3 @@
+Profe: Para correr el proyecto, recuerde abrir la terminal 
+en esta carpeta, ejecutar npm install para instalar las dependencias
+ y luego npm run dev para levantar el servidor.
