@@ -24,3 +24,7 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Archivos temporales del proyecto
+Nico.md
+front nico/
