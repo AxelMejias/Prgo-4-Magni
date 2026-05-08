@@ -1,7 +1,11 @@
 import hashlib
+import secrets
+import httpx
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status
-from app.auth.model import Usuario, RefreshToken, UsuarioRol
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+from app.auth.model import Usuario, RefreshToken, UsuarioRol, PasswordResetToken
 from app.auth.schemas import (
     LoginRequest, RegisterRequest, TokenResponse, UserResponse, RolResponse,
 )
@@ -103,6 +107,84 @@ class AuthService:
         token_obj = uow.refresh_tokens.get_active_by_token(raw_token)
         if token_obj:
             uow.refresh_tokens.revoke(token_obj)
+
+    def google_login(self, uow, credential: str) -> TokenResponse:
+        try:
+            payload = google_id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                settings.GOOGLE_CLIENT_ID,
+            )
+        except ValueError:
+            _problem("INVALID_GOOGLE_TOKEN", "Token de Google inválido o expirado", status.HTTP_401_UNAUTHORIZED)
+
+        email = payload.get("email")
+        if not email:
+            _problem("GOOGLE_NO_EMAIL", "No se pudo obtener el email de Google", status.HTTP_400_BAD_REQUEST)
+
+        usuario = uow.usuarios.get_by_email(email)
+        if not usuario:
+            usuario = Usuario(
+                nombre=payload.get("given_name", ""),
+                apellido=payload.get("family_name", ""),
+                email=email,
+                password_hash=hash_password(secrets.token_urlsafe(32)),
+            )
+            usuario = uow.usuarios.add(usuario)
+            uow.usuarios.add_rol(UsuarioRol(usuario_id=usuario.id, rol_codigo="CLIENT"))
+
+        roles = uow.usuarios.get_roles(usuario.id)
+        access_token = create_access_token({
+            "sub": str(usuario.id),
+            "email": usuario.email,
+            "roles": [r.codigo for r in roles],
+        })
+
+        raw_refresh = create_refresh_token()
+        uow.refresh_tokens.add(RefreshToken(
+            usuario_id=usuario.id,
+            token_hash=hashlib.sha256(raw_refresh.encode()).hexdigest(),
+            expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        ))
+
+        return TokenResponse(access_token=access_token, refresh_token=raw_refresh)
+
+    def forgot_password(self, uow, email: str) -> None:
+        usuario = uow.usuarios.get_by_email(email)
+        if not usuario:
+            return  # No revelar si el email existe o no
+
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        uow.reset_tokens.add(PasswordResetToken(
+            usuario_id=usuario.id,
+            token_hash=token_hash,
+            expires_at=datetime.utcnow() + timedelta(minutes=15),
+        ))
+
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+        try:
+            httpx.post(settings.N8N_WEBHOOK_URL, json={
+                "email": usuario.email,
+                "nombre": usuario.nombre,
+                "reset_link": reset_link,
+            }, timeout=5)
+        except Exception:
+            pass  # Si n8n falla, no rompemos el flujo
+
+    def reset_password(self, uow, raw_token: str, new_password: str) -> None:
+        token_obj = uow.reset_tokens.get_valid_by_token(raw_token)
+        if not token_obj:
+            _problem("INVALID_RESET_TOKEN", "Token inválido o expirado", status.HTTP_400_BAD_REQUEST)
+
+        usuario = uow.usuarios.get_by_id(token_obj.usuario_id)
+        if not usuario:
+            _problem("USER_NOT_FOUND", "Usuario no encontrado", status.HTTP_404_NOT_FOUND)
+
+        usuario.password_hash = hash_password(new_password)
+        usuario.updated_at = datetime.utcnow()
+        uow.session.add(usuario)
+        uow.reset_tokens.mark_used(token_obj)
 
     def get_me(self, uow, usuario_id: int) -> UserResponse:
         usuario = uow.usuarios.get_by_id(usuario_id)

@@ -14,3 +14,5 @@ slowapi
 alembic
 # Excel export
 openpyxl
+# Google OAuth
+google-auth

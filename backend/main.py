@@ -12,7 +12,7 @@ from app.core.config import settings
 # Modelos existentes
 from app.models import Categoria, Ingrediente, Producto, ProductoCategoria, ProductoIngrediente  # noqa: F401
 # Modelos de auth (deben registrarse antes de create_all)
-from app.auth.model import Usuario, Rol, UsuarioRol, RefreshToken  # noqa: F401
+from app.auth.model import Usuario, Rol, UsuarioRol, RefreshToken, PasswordResetToken  # noqa: F401
 
 from app.routers.categorias import router as categorias_router
 from app.routers.ingredientes import router as ingredientes_router

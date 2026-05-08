@@ -56,4 +56,35 @@ export const authApi = {
     const { data } = await axiosClient.get<User>("/api/v1/auth/me");
     return data;
   },
+
+  forgotPassword: async (email: string): Promise<void> => {
+    try {
+      await axiosClient.post("/api/v1/auth/forgot-password", { email });
+    } catch (err) {
+      throw new Error(extractErrorMessage(err));
+    }
+  },
+
+  resetPassword: async (token: string, new_password: string): Promise<void> => {
+    try {
+      await axiosClient.post("/api/v1/auth/reset-password", { token, new_password });
+    } catch (err) {
+      throw new Error(extractErrorMessage(err));
+    }
+  },
+
+  googleLogin: async (credential: string): Promise<{ tokens: TokenResponse; user: User }> => {
+    try {
+      const { data: tokens } = await axiosClient.post<TokenResponse>(
+        "/api/v1/auth/google",
+        { credential }
+      );
+      const { data: user } = await axiosClient.get<User>("/api/v1/auth/me", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      return { tokens, user };
+    } catch (err) {
+      throw new Error(extractErrorMessage(err));
+    }
+  },
 };

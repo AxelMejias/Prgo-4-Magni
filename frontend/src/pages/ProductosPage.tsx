@@ -12,10 +12,12 @@ import type {
   ProductoUpdate,
 } from "../types";
 import Modal from "../components/Modal";
+import { useAuthStore } from "../shared/store/authStore";
 
 export default function ProductosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const canManage = useAuthStore((s) => s.hasRole(["ADMIN", "STOCK"]));
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -188,13 +190,15 @@ export default function ProductosPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-brand-500/25 hover:shadow-md hover:shadow-brand-500/30 cursor-pointer flex items-center gap-2"
-        >
-          <span className="text-lg leading-none">+</span>
-          Nuevo Producto
-        </button>
+        {canManage && (
+          <button
+            onClick={openCreate}
+            className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-brand-500/25 hover:shadow-md hover:shadow-brand-500/30 cursor-pointer flex items-center gap-2"
+          >
+            <span className="text-lg leading-none">+</span>
+            Nuevo Producto
+          </button>
+        )}
       </div>
 
       {/* Loading / Error */}
@@ -281,18 +285,22 @@ export default function ProductosPage() {
                       >
                         👁️ Ver
                       </button>
-                      <button
-                        onClick={() => openEdit(prod)}
-                        className="p-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all text-xs font-semibold cursor-pointer"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(prod.id)}
-                        className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 transition-all text-xs font-semibold cursor-pointer"
-                      >
-                        🗑️
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={() => openEdit(prod)}
+                          className="p-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all text-xs font-semibold cursor-pointer"
+                        >
+                          ✏️ Editar
+                        </button>
+                      )}
+                      {canManage && (
+                        <button
+                          onClick={() => handleDelete(prod.id)}
+                          className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 transition-all text-xs font-semibold cursor-pointer"
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -20,13 +20,14 @@ class UnitOfWork:
         from app.repositories.categoria_repository import CategoriaRepository
         from app.repositories.ingrediente_repository import IngredienteRepository
         from app.repositories.producto_repository import ProductoRepository
-        from app.auth.repository import UsuarioRepository, RefreshTokenRepository
+        from app.auth.repository import UsuarioRepository, RefreshTokenRepository, PasswordResetTokenRepository
 
         self.categorias = CategoriaRepository(self.session)
         self.ingredientes = IngredienteRepository(self.session)
         self.productos = ProductoRepository(self.session)
         self.usuarios = UsuarioRepository(self.session)
         self.refresh_tokens = RefreshTokenRepository(self.session)
+        self.reset_tokens = PasswordResetTokenRepository(self.session)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

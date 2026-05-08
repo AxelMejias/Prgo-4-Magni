@@ -2,7 +2,7 @@ import hashlib
 from datetime import datetime
 from typing import Optional
 from sqlmodel import Session, select
-from app.auth.model import Usuario, UsuarioRol, Rol, RefreshToken
+from app.auth.model import Usuario, UsuarioRol, Rol, RefreshToken, PasswordResetToken
 
 
 class UsuarioRepository:
@@ -77,4 +77,33 @@ class RefreshTokenRepository:
         for t in tokens:
             t.revoked_at = now
             self.session.add(t)
+        self.session.flush()
+
+
+class PasswordResetTokenRepository:
+    def __init__(self, session: Session):
+        self.session = session
+
+    @staticmethod
+    def _hash(token: str) -> str:
+        return hashlib.sha256(token.encode()).hexdigest()
+
+    def add(self, token: PasswordResetToken) -> PasswordResetToken:
+        self.session.add(token)
+        self.session.flush()
+        return token
+
+    def get_valid_by_token(self, raw_token: str) -> Optional[PasswordResetToken]:
+        token_hash = self._hash(raw_token)
+        return self.session.exec(
+            select(PasswordResetToken).where(
+                PasswordResetToken.token_hash == token_hash,
+                PasswordResetToken.used_at == None,
+                PasswordResetToken.expires_at > datetime.utcnow(),
+            )
+        ).first()
+
+    def mark_used(self, token: PasswordResetToken) -> None:
+        token.used_at = datetime.utcnow()
+        self.session.add(token)
         self.session.flush()

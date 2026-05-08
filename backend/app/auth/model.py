@@ -38,3 +38,13 @@ class RefreshToken(SQLModel, table=True):
     expires_at: datetime
     revoked_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PasswordResetToken(SQLModel, table=True):
+    __tablename__ = "password_reset_token"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario_id: int = Field(foreign_key="usuario.id")
+    token_hash: str = Field(max_length=64, unique=True)
+    expires_at: datetime
+    used_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

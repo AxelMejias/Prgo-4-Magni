@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuthStore } from "../shared/store/authStore";
 import { authApi } from "../shared/api/authApi";
 
@@ -52,12 +53,26 @@ export default function LoginPage() {
     setSuccess("");
     try {
       await authApi.register({ nombre, apellido, email, password, celular: celular || undefined });
-      // Auto-login tras registrarse
       const { tokens, user } = await authApi.login({ email, password });
       login(tokens.access_token, tokens.refresh_token, user);
       navigate("/", { replace: true });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al registrarse");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+    if (!credentialResponse.credential) return;
+    setLoading(true);
+    setError("");
+    try {
+      const { tokens, user } = await authApi.googleLogin(credentialResponse.credential);
+      login(tokens.access_token, tokens.refresh_token, user);
+      navigate("/", { replace: true });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión con Google");
     } finally {
       setLoading(false);
     }
@@ -143,6 +158,33 @@ export default function LoginPage() {
             >
               {loading ? "Ingresando..." : "Iniciar sesión"}
             </button>
+
+            <div className="text-center">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+
+            {/* Divisor */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400">o continuá con</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Botón Google */}
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Error al iniciar sesión con Google")}
+                text="signin_with"
+                shape="rectangular"
+                logo_alignment="left"
+              />
+            </div>
 
             <p className="text-xs text-gray-400 text-center">
               Admin: admin@foodstore.com / Admin1234!
@@ -242,6 +284,24 @@ export default function LoginPage() {
             >
               {loading ? "Creando cuenta..." : "Crear cuenta"}
             </button>
+
+            {/* Divisor */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400">o registrate con</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Botón Google */}
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Error al registrarse con Google")}
+                text="signup_with"
+                shape="rectangular"
+                logo_alignment="left"
+              />
+            </div>
 
             <p className="text-xs text-gray-400 text-center">
               Al registrarte entrás automáticamente con rol <strong>Cliente</strong>
