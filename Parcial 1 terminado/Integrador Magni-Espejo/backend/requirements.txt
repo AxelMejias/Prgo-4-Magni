@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+psycopg2-binary
+python-dotenv
+# Auth
+bcrypt
+python-jose[cryptography]
+pydantic-settings
+email-validator
+# Rate limiting
+slowapi
+# Alembic
+alembic
+# Excel export
+openpyxl
