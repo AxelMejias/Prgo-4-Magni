@@ -1,9 +1,11 @@
 import type {
   Categoria,
   CategoriaInput,
+  PaginatedCategorias,
   Ingrediente,
   IngredienteInput,
   ProductoListItem,
+  PaginatedProductos,
   ProductoDetalle,
   ProductoCreate,
   ProductoUpdate,
@@ -102,11 +104,13 @@ function get<T>(url: string): Promise<T> {
 
 // ─── Categorías ──────────────────────────────────────────
 export const categoriasApi = {
-  getAll: () => get<Categoria[]>("/categorias/"),
-  getById: (id: number) => get<Categoria>(`/categorias/${id}`),
-  create: (data: CategoriaInput) => post<Categoria>("/categorias/", data),
-  update: (id: number, data: CategoriaInput) => put<Categoria>(`/categorias/${id}`, data),
-  delete: (id: number) => del(`/categorias/${id}`),
+  getAll: () => get<{ items: Categoria[]; total: number }>("/api/v1/categorias/?page=1&size=100").then(r => r.items),
+  getPaginated: (page = 1, size = 5) =>
+    get<PaginatedCategorias>(`/api/v1/categorias/?page=${page}&size=${size}`),
+  getById: (id: number) => get<Categoria>(`/api/v1/categorias/${id}`),
+  create: (data: CategoriaInput) => post<Categoria>("/api/v1/categorias/", data),
+  update: (id: number, data: CategoriaInput) => put<Categoria>(`/api/v1/categorias/${id}`, data),
+  delete: (id: number) => del(`/api/v1/categorias/${id}`),
 };
 
 // ─── Ingredientes — apunta a la nueva URL con paginación ─
@@ -118,13 +122,34 @@ export const ingredientesApi = {
   update: (id: number, data: IngredienteInput) =>
     put<Ingrediente>(`/api/v1/ingredientes/${id}`, data),
   delete: (id: number) => del(`/api/v1/ingredientes/${id}`),
+  getInactivos: (page = 1, size = 20) =>
+    get<{ items: Ingrediente[]; total: number; page: number; size: number; pages: number }>(
+      `/api/v1/ingredientes/inactivos?page=${page}&size=${size}`
+    ),
+  reactivar: (id: number) =>
+    fetch(`${BASE}/api/v1/ingredientes/${id}/reactivar`, { method: "PATCH", headers: authHeaders() }).then((r) =>
+      handleResponse<Ingrediente>(r)
+    ),
 };
 
 // ─── Productos ───────────────────────────────────────────
 export const productosApi = {
-  getAll: () => get<ProductoListItem[]>("/productos/"),
-  getById: (id: number) => get<ProductoDetalle>(`/productos/${id}`),
-  create: (data: ProductoCreate) => post<ProductoDetalle>("/productos/", data),
-  update: (id: number, data: ProductoUpdate) => put<ProductoDetalle>(`/productos/${id}`, data),
-  delete: (id: number) => del(`/productos/${id}`),
+  getAll: (page = 1, size = 20, params?: { nombre?: string; solo_disponibles?: boolean }) => {
+    const qs = new URLSearchParams({ page: String(page), size: String(size) });
+    if (params?.nombre) qs.set("nombre", params.nombre);
+    if (params?.solo_disponibles !== undefined) qs.set("solo_disponibles", String(params.solo_disponibles));
+    return get<PaginatedProductos>(`/api/v1/productos/?${qs}`);
+  },
+  getAllForSelect: () =>
+    get<PaginatedProductos>("/api/v1/productos/?page=1&size=100&solo_disponibles=false").then((r) => r.items),
+  getById: (id: number) => get<ProductoDetalle>(`/api/v1/productos/${id}`),
+  create: (data: ProductoCreate) => post<ProductoDetalle>("/api/v1/productos/", data),
+  update: (id: number, data: ProductoUpdate) => put<ProductoDetalle>(`/api/v1/productos/${id}`, data),
+  delete: (id: number) => del(`/api/v1/productos/${id}`),
+  getInactivos: (page = 1, size = 20) =>
+    get<PaginatedProductos>(`/api/v1/productos/inactivos?page=${page}&size=${size}`),
+  reactivar: (id: number) =>
+    fetch(`${BASE}/api/v1/productos/${id}/reactivar`, { method: "PATCH", headers: authHeaders() }).then((r) =>
+      handleResponse<ProductoDetalle>(r)
+    ),
 };

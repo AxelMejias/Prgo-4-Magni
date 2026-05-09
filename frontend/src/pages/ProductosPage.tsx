@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { productosApi, categoriasApi, ingredientesApi } from "../services/api";
 import type {
   ProductoListItem,
@@ -14,13 +14,23 @@ import type {
 import Modal from "../components/Modal";
 import { useAuthStore } from "../shared/store/authStore";
 
+type Tab = "activos" | "inactivos";
+
+const PAGE_SIZE = 5;
+
 export default function ProductosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const canManage = useAuthStore((s) => s.hasRole(["ADMIN", "STOCK"]));
+
+  // Estado en URL: ?tab=activos&page=2
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get("tab") as Tab) ?? "activos";
+  const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
+
+  // Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [precio, setPrecio] = useState("");
@@ -30,13 +40,25 @@ export default function ProductosPage() {
   >([]);
   const [error, setError] = useState("");
 
+  // ── Queries ────────────────────────────────────────────────────────────────
   const {
-    data: productos,
+    data: productosData,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["productos"],
-    queryFn: productosApi.getAll,
+    queryKey: ["productos", "activos", currentPage],
+    queryFn: () => productosApi.getAll(currentPage, PAGE_SIZE, { solo_disponibles: false }),
+    enabled: tab === "activos",
+  });
+
+  const {
+    data: inactivosData,
+    isLoading: isLoadingInactivos,
+    isError: isErrorInactivos,
+  } = useQuery({
+    queryKey: ["productos", "inactivos", currentPage],
+    queryFn: () => productosApi.getInactivos(currentPage, PAGE_SIZE),
+    enabled: tab === "inactivos",
   });
 
   const { data: categorias } = useQuery({
@@ -45,10 +67,11 @@ export default function ProductosPage() {
   });
 
   const { data: ingredientes } = useQuery({
-    queryKey: ["ingredientes"],
+    queryKey: ["ingredientes-select"],
     queryFn: ingredientesApi.getAll,
   });
 
+  // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: (data: ProductoCreate) => productosApi.create(data),
     onSuccess: () => {
@@ -74,6 +97,27 @@ export default function ProductosPage() {
       queryClient.invalidateQueries({ queryKey: ["productos"] });
     },
   });
+
+  const reactivarMutation = useMutation({
+    mutationFn: (id: number) => productosApi.reactivar(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["productos"] });
+    },
+  });
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  function setCurrentPage(updater: number | ((p: number) => number)) {
+    const next = typeof updater === "function" ? updater(currentPage) : updater;
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("page", String(next));
+      return params;
+    });
+  }
+
+  function switchTab(t: Tab) {
+    setSearchParams({ tab: t, page: "1" });
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -106,42 +150,35 @@ export default function ProductosPage() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
-
     if (editingId) {
-      const data: ProductoUpdate = {
-        nombre,
-        descripcion: descripcion || undefined,
-        precio: Number(precio),
-      };
-      updateMutation.mutate({ id: editingId, data });
+      updateMutation.mutate({ id: editingId, data: { nombre, descripcion: descripcion || undefined, precio: Number(precio) } });
     } else {
-      const data: ProductoCreate = {
+      createMutation.mutate({
         nombre,
         descripcion: descripcion || undefined,
         precio: Number(precio),
         categoria_ids: selectedCategorias,
         ingredientes: selectedIngredientes
-          .filter((item) => item.ingrediente_id > 0 && Number(item.cantidad) > 0)
-          .map((item) => ({
-            ingrediente_id: item.ingrediente_id,
-            cantidad: Number(item.cantidad),
-          })),
-      };
-      createMutation.mutate(data);
+          .filter((i) => i.ingrediente_id > 0 && Number(i.cantidad) > 0)
+          .map((i) => ({ ingrediente_id: i.ingrediente_id, cantidad: Number(i.cantidad) })),
+      });
     }
   }
 
   function handleDelete(id: number) {
-    if (window.confirm("¿Estás seguro de eliminar este producto?")) {
+    if (window.confirm("¿Estás seguro de eliminar este producto? Pasará a inactivos.")) {
       deleteMutation.mutate(id);
     }
   }
 
+  function handleReactivar(prod: ProductoListItem) {
+    if (window.confirm(`¿Reactivar "${prod.nombre}"?`)) {
+      reactivarMutation.mutate(prod.id);
+    }
+  }
+
   function addIngrediente() {
-    setSelectedIngredientes((prev) => [
-      ...prev,
-      { ingrediente_id: 0, cantidad: "" },
-    ]);
+    setSelectedIngredientes((prev) => [...prev, { ingrediente_id: 0, cantidad: "" }]);
   }
 
   function removeIngrediente(index: number) {
@@ -150,19 +187,14 @@ export default function ProductosPage() {
 
   function updateIngredienteId(index: number, value: number) {
     setSelectedIngredientes((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, ingrediente_id: value } : item
-      )
+      prev.map((item, i) => (i === index ? { ...item, ingrediente_id: value } : item))
     );
   }
 
   function updateIngredienteCantidad(index: number, value: string) {
-    // Allow empty, digits, and decimal point
     if (value === "" || /^\d*\.?\d*$/.test(value)) {
       setSelectedIngredientes((prev) =>
-        prev.map((item, i) =>
-          i === index ? { ...item, cantidad: value } : item
-        )
+        prev.map((item, i) => (i === index ? { ...item, cantidad: value } : item))
       );
     }
   }
@@ -174,6 +206,9 @@ export default function ProductosPage() {
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
+  const currentData = tab === "activos" ? productosData : inactivosData;
+  const currentLoading = tab === "activos" ? isLoading : isLoadingInactivos;
+  const currentError = tab === "activos" ? isError : isErrorInactivos;
 
   return (
     <div>
@@ -186,11 +221,13 @@ export default function ProductosPage() {
           <div>
             <h1 className="text-2xl font-bold text-surface-800">Productos</h1>
             <p className="text-sm text-surface-400 mt-0.5">
-              {productos ? `${productos.length} producto${productos.length !== 1 ? "s" : ""} registrado${productos.length !== 1 ? "s" : ""}` : "Cargando..."}
+              {currentData
+                ? `${currentData.total} producto${currentData.total !== 1 ? "s" : ""} ${tab === "activos" ? "activos" : "inactivos"}`
+                : "Cargando..."}
             </p>
           </div>
         </div>
-        {canManage && (
+        {canManage && tab === "activos" && (
           <button
             onClick={openCreate}
             className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-brand-500/25 hover:shadow-md hover:shadow-brand-500/30 cursor-pointer flex items-center gap-2"
@@ -201,57 +238,84 @@ export default function ProductosPage() {
         )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 bg-surface-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => switchTab("activos")}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+            tab === "activos"
+              ? "bg-white text-brand-600 shadow-sm"
+              : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          ✓ Activos
+        </button>
+        <button
+          onClick={() => switchTab("inactivos")}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+            tab === "inactivos"
+              ? "bg-white text-danger-600 shadow-sm"
+              : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          🗑 Inactivos
+          {inactivosData && inactivosData.total > 0 && (
+            <span className="ml-1.5 bg-danger-100 text-danger-600 text-xs px-1.5 py-0.5 rounded-full font-bold">
+              {inactivosData.total}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Loading / Error */}
-      {isLoading && (
+      {currentLoading && (
         <div className="bg-white rounded-xl border border-surface-200 p-16 text-center">
           <div className="w-10 h-10 border-3 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-surface-400 text-sm">Cargando productos...</p>
         </div>
       )}
-      {isError && (
+      {currentError && (
         <div className="bg-danger-50 border border-danger-100 rounded-xl p-6 text-center text-danger-600">
           Error al cargar los productos
         </div>
       )}
 
       {/* Table */}
-      {productos && (
+      {currentData && (
         <div className="bg-white rounded-xl border border-surface-200 overflow-hidden shadow-sm">
           <table className="w-full">
             <thead>
               <tr className="bg-surface-50 border-b border-surface-200">
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  Producto
-                </th>
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  Descripción
-                </th>
-                <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  Precio
-                </th>
-                <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  Acciones
-                </th>
+                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">ID</th>
+                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Producto</th>
+                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Descripción</th>
+                <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Precio</th>
+                <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {productos.length === 0 && (
+              {currentData.items.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center py-16 text-surface-400">
                     <p className="text-3xl mb-2">📦</p>
-                    <p className="font-medium">No hay productos todavía</p>
-                    <p className="text-xs mt-1">Creá el primero con el botón de arriba</p>
+                    <p className="font-medium">
+                      {tab === "activos" ? "No hay productos activos" : "No hay productos inactivos"}
+                    </p>
+                    {tab === "activos" && (
+                      <p className="text-xs mt-1">Creá el primero con el botón de arriba</p>
+                    )}
                   </td>
                 </tr>
               )}
-              {productos.map((prod, i) => (
+              {currentData.items.map((prod, i) => (
                 <tr
                   key={prod.id}
-                  className={`table-row-hover border-b border-surface-100 last:border-0 ${
-                    i % 2 === 0 ? "bg-white" : "bg-surface-50/50"
+                  className={`border-b border-surface-100 last:border-0 ${
+                    tab === "inactivos"
+                      ? "bg-gray-50 opacity-75"
+                      : i % 2 === 0
+                      ? "bg-white hover:bg-surface-50/50"
+                      : "bg-surface-50/30 hover:bg-surface-50"
                   }`}
                 >
                   <td className="px-6 py-4">
@@ -260,45 +324,67 @@ export default function ProductosPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <button
-                      onClick={() => navigate(`/productos/${prod.id}`)}
-                      className="font-semibold text-sm text-brand-600 hover:text-brand-800 transition-colors cursor-pointer hover:underline underline-offset-2"
-                    >
-                      {prod.nombre}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-surface-500">
-                    {prod.descripcion || (
-                      <span className="italic text-surface-300">Sin descripción</span>
+                    {tab === "activos" ? (
+                      <button
+                        onClick={() => navigate(`/productos/${prod.id}`)}
+                        className="font-semibold text-sm text-brand-600 hover:text-brand-800 transition-colors cursor-pointer hover:underline underline-offset-2"
+                      >
+                        {prod.nombre}
+                      </button>
+                    ) : (
+                      <span className="font-semibold text-sm text-surface-400 line-through">
+                        {prod.nombre}
+                      </span>
                     )}
                   </td>
+                  <td className="px-6 py-4 text-sm text-surface-500">
+                    {prod.descripcion || <span className="italic text-surface-300">Sin descripción</span>}
+                  </td>
                   <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center bg-success-50 text-success-700 px-3 py-1 rounded-lg text-sm font-bold">
-                      ${prod.precio.toLocaleString("es-AR")}
+                    <span className={`inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold ${
+                      tab === "inactivos"
+                        ? "bg-surface-100 text-surface-400"
+                        : "bg-success-50 text-success-700"
+                    }`}>
+                      ${Number(prod.precio).toLocaleString("es-AR")}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => navigate(`/productos/${prod.id}`)}
-                        className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all text-xs font-semibold cursor-pointer"
-                      >
-                        👁️ Ver
-                      </button>
-                      {canManage && (
-                        <button
-                          onClick={() => openEdit(prod)}
-                          className="p-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all text-xs font-semibold cursor-pointer"
-                        >
-                          ✏️ Editar
-                        </button>
+                      {tab === "activos" && (
+                        <>
+                          <button
+                            onClick={() => navigate(`/productos/${prod.id}`)}
+                            className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all text-xs font-semibold cursor-pointer"
+                          >
+                            👁️ Ver
+                          </button>
+                          {canManage && (
+                            <button
+                              onClick={() => openEdit(prod)}
+                              className="p-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all text-xs font-semibold cursor-pointer"
+                            >
+                              ✏️ Editar
+                            </button>
+                          )}
+                          {canManage && (
+                            <button
+                              onClick={() => handleDelete(prod.id)}
+                              disabled={deleteMutation.isPending}
+                              className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 disabled:opacity-50 transition-all text-xs font-semibold cursor-pointer"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </>
                       )}
-                      {canManage && (
+                      {tab === "inactivos" && canManage && (
                         <button
-                          onClick={() => handleDelete(prod.id)}
-                          className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 transition-all text-xs font-semibold cursor-pointer"
+                          onClick={() => handleReactivar(prod)}
+                          disabled={reactivarMutation.isPending}
+                          className="p-2 rounded-lg bg-success-50 text-success-700 hover:bg-success-100 disabled:opacity-50 transition-all text-xs font-semibold cursor-pointer"
                         >
-                          🗑️
+                          ♻️ Reactivar
                         </button>
                       )}
                     </div>
@@ -307,11 +393,45 @@ export default function ProductosPage() {
               ))}
             </tbody>
           </table>
-          {productos.length > 0 && (
-            <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 text-xs text-surface-400">
-              Mostrando {productos.length} producto{productos.length !== 1 && "s"}
+
+          {/* Footer con paginación */}
+          <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 flex items-center justify-between">
+            <span className="text-xs text-surface-400">
+              {currentData.total} resultado{currentData.total !== 1 && "s"} — página {currentData.page} de {currentData.pages || 1}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => p - 1)}
+                disabled={currentPage <= 1}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                ← Anterior
+              </button>
+              {Array.from({ length: Math.min(currentData.pages, 5) }, (_, i) => {
+                const p = i + 1;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p)}
+                    className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                      p === currentPage
+                        ? "bg-brand-500 text-white shadow-sm"
+                        : "border border-surface-200 hover:bg-surface-100 text-surface-600"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setCurrentPage((p) => p + 1)}
+                disabled={currentPage >= (currentData.pages || 1)}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                Siguiente →
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -411,9 +531,7 @@ export default function ProductosPage() {
           {!editingId && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-surface-700">
-                  Ingredientes
-                </label>
+                <label className="text-sm font-semibold text-surface-700">Ingredientes</label>
                 <button
                   type="button"
                   onClick={addIngrediente}
@@ -422,15 +540,11 @@ export default function ProductosPage() {
                   + Agregar
                 </button>
               </div>
-
               {selectedIngredientes.length === 0 && (
                 <div className="bg-surface-50 rounded-xl p-4 text-center border border-dashed border-surface-300">
-                  <p className="text-xs text-surface-400">
-                    Sin ingredientes seleccionados
-                  </p>
+                  <p className="text-xs text-surface-400">Sin ingredientes seleccionados</p>
                 </div>
               )}
-
               <div className="space-y-2">
                 {selectedIngredientes.map((item, index) => (
                   <div
@@ -439,14 +553,10 @@ export default function ProductosPage() {
                   >
                     <select
                       value={item.ingrediente_id}
-                      onChange={(e) =>
-                        updateIngredienteId(index, Number(e.target.value))
-                      }
+                      onChange={(e) => updateIngredienteId(index, Number(e.target.value))}
                       className="flex-1 border border-surface-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition bg-white"
                     >
-                      <option value={0}>
-                        {ingredientes ? "Seleccionar..." : "Cargando..."}
-                      </option>
+                      <option value={0}>{ingredientes ? "Seleccionar..." : "Cargando..."}</option>
                       {ingredientes?.map((ing) => (
                         <option key={ing.id} value={ing.id}>
                           {ing.nombre} ({ing.unidad_medida})
@@ -458,9 +568,7 @@ export default function ProductosPage() {
                       inputMode="decimal"
                       placeholder="Cant."
                       value={item.cantidad}
-                      onChange={(e) =>
-                        updateIngredienteCantidad(index, e.target.value)
-                      }
+                      onChange={(e) => updateIngredienteCantidad(index, e.target.value)}
                       className="w-24 border border-surface-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition bg-white"
                     />
                     <button
@@ -495,11 +603,7 @@ export default function ProductosPage() {
               disabled={isSaving}
               className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-brand-500/25 cursor-pointer"
             >
-              {isSaving
-                ? "Guardando..."
-                : editingId
-                  ? "Actualizar"
-                  : "Crear Producto"}
+              {isSaving ? "Guardando..." : editingId ? "Actualizar" : "Crear Producto"}
             </button>
           </div>
         </form>

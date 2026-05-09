@@ -31,9 +31,17 @@ def get_current_user_id(payload: dict = Depends(get_current_user_payload)) -> in
 
 
 def require_role(roles: list[str]):
+    """
+    Dependencia factory para RBAC.
+    Uso: Depends(require_role(["ADMIN", "STOCK"]))
+    """
     def dependency(payload: dict = Depends(get_current_user_payload)) -> dict:
         user_roles = payload.get("roles", [])
         if not any(r in user_roles for r in roles):
-            _problem("FORBIDDEN", "No tenés permisos para esta operación", status.HTTP_403_FORBIDDEN)
+            _problem(
+                "FORBIDDEN",
+                f"Se requiere uno de los roles: {', '.join(roles)}",
+                status.HTTP_403_FORBIDDEN,
+            )
         return payload
     return dependency

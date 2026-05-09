@@ -10,6 +10,14 @@ export interface CategoriaInput {
   descripcion?: string;
 }
 
+export interface PaginatedCategorias {
+  items: Categoria[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
 // --- Ingrediente ---
 export interface Ingrediente {
   id: number;
@@ -34,6 +42,19 @@ export interface ProductoListItem {
   nombre: string;
   descripcion?: string;
   precio: number;
+  stock_cantidad: number;
+  disponible: boolean;
+  created_at: string;
+  updated_at?: string;
+  deleted_at?: string;
+}
+
+export interface PaginatedProductos {
+  items: ProductoListItem[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
 }
 
 export interface IngredienteEnProducto {

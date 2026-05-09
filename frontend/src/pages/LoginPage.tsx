@@ -186,9 +186,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <p className="text-xs text-gray-400 text-center">
-              Admin: admin@foodstore.com / Admin1234!
-            </p>
+
           </form>
         )}
 

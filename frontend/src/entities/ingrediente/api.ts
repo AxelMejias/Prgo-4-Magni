@@ -5,6 +5,7 @@ import type {
   IngredienteCreate,
   IngredienteUpdate,
   IngredienteFilters,
+  ImportarResult,
 } from "./model";
 
 function extractMsg(error: unknown): Error {
@@ -67,6 +68,47 @@ export const ingredienteApi = {
     const link = document.createElement("a");
     link.href = url;
     link.download = "ingredientes.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
+  },
+
+  getInactivos: async (page = 1, size = 20): Promise<PaginatedIngredientes> => {
+    const { data } = await axiosClient.get("/api/v1/ingredientes/inactivos", {
+      params: { page, size },
+    });
+    return data;
+  },
+
+  reactivar: async (id: number): Promise<Ingrediente> => {
+    try {
+      const { data } = await axiosClient.patch(`/api/v1/ingredientes/${id}/reactivar`);
+      return data;
+    } catch (err) {
+      throw extractMsg(err);
+    }
+  },
+
+  importarExcel: async (file: File): Promise<ImportarResult> => {
+    try {
+      const form = new FormData();
+      form.append("archivo", file);
+      const { data } = await axiosClient.post("/api/v1/ingredientes/importar", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    } catch (err) {
+      throw extractMsg(err);
+    }
+  },
+
+  descargarPlantilla: async (): Promise<void> => {
+    const response = await axiosClient.get("/api/v1/ingredientes/plantilla", {
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "plantilla_ingredientes.xlsx";
     link.click();
     URL.revokeObjectURL(url);
   },

@@ -1,27 +1,33 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { categoriasApi } from "../services/api";
 import type { Categoria, CategoriaInput } from "../types";
 import Modal from "../components/Modal";
 
+const PAGE_SIZE = 5;
+
 export default function CategoriasPage() {
   const queryClient = useQueryClient();
+
+  // Estado en URL: ?page=2
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
+
+  // Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Categoria | null>(null);
-
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [error, setError] = useState("");
 
-  const {
-    data: categorias,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ["categorias"],
-    queryFn: categoriasApi.getAll,
+  // ── Query ──────────────────────────────────────────────────────────────────
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["categorias", "paginated", currentPage],
+    queryFn: () => categoriasApi.getPaginated(currentPage, PAGE_SIZE),
   });
 
+  // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: (data: CategoriaInput) => categoriasApi.create(data),
     onSuccess: () => {
@@ -48,6 +54,16 @@ export default function CategoriasPage() {
     },
   });
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  function setPage(updater: number | ((p: number) => number)) {
+    const next = typeof updater === "function" ? updater(currentPage) : updater;
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("page", String(next));
+      return params;
+    });
+  }
+
   function openCreate() {
     setEditing(null);
     setNombre("");
@@ -73,14 +89,11 @@ export default function CategoriasPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const data: CategoriaInput = {
-      nombre,
-      descripcion: descripcion || undefined,
-    };
+    const payload: CategoriaInput = { nombre, descripcion: descripcion || undefined };
     if (editing) {
-      updateMutation.mutate({ id: editing.id, data });
+      updateMutation.mutate({ id: editing.id, data: payload });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(payload);
     }
   }
 
@@ -103,7 +116,9 @@ export default function CategoriasPage() {
           <div>
             <h1 className="text-2xl font-bold text-surface-800">Categorías</h1>
             <p className="text-sm text-surface-400 mt-0.5">
-              {categorias ? `${categorias.length} categoría${categorias.length !== 1 ? "s" : ""} registrada${categorias.length !== 1 ? "s" : ""}` : "Cargando..."}
+              {data
+                ? `${data.total} categoría${data.total !== 1 ? "s" : ""} registrada${data.total !== 1 ? "s" : ""}`
+                : "Cargando..."}
             </p>
           </div>
         </div>
@@ -130,27 +145,19 @@ export default function CategoriasPage() {
       )}
 
       {/* Table */}
-      {categorias && (
+      {data && (
         <div className="bg-white rounded-xl border border-surface-200 overflow-hidden shadow-sm">
           <table className="w-full">
             <thead>
               <tr className="bg-surface-50 border-b border-surface-200">
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  Nombre
-                </th>
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  Descripción
-                </th>
-                <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                  Acciones
-                </th>
+                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">ID</th>
+                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Nombre</th>
+                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Descripción</th>
+                <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {categorias.length === 0 && (
+              {data.items.length === 0 && (
                 <tr>
                   <td colSpan={4} className="text-center py-16 text-surface-400">
                     <p className="text-3xl mb-2">🏷️</p>
@@ -159,7 +166,7 @@ export default function CategoriasPage() {
                   </td>
                 </tr>
               )}
-              {categorias.map((cat, i) => (
+              {data.items.map((cat, i) => (
                 <tr
                   key={cat.id}
                   className={`table-row-hover border-b border-surface-100 last:border-0 ${
@@ -172,14 +179,10 @@ export default function CategoriasPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="font-semibold text-sm text-surface-800">
-                      {cat.nombre}
-                    </span>
+                    <span className="font-semibold text-sm text-surface-800">{cat.nombre}</span>
                   </td>
                   <td className="px-6 py-4 text-sm text-surface-500">
-                    {cat.descripcion || (
-                      <span className="italic text-surface-300">Sin descripción</span>
-                    )}
+                    {cat.descripcion || <span className="italic text-surface-300">Sin descripción</span>}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
@@ -191,7 +194,8 @@ export default function CategoriasPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(cat.id)}
-                        className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 transition-all text-xs font-semibold cursor-pointer"
+                        disabled={deleteMutation.isPending}
+                        className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 disabled:opacity-50 transition-all text-xs font-semibold cursor-pointer"
                       >
                         🗑️ Eliminar
                       </button>
@@ -201,11 +205,45 @@ export default function CategoriasPage() {
               ))}
             </tbody>
           </table>
-          {categorias.length > 0 && (
-            <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 text-xs text-surface-400">
-              Mostrando {categorias.length} categoría{categorias.length !== 1 && "s"}
+
+          {/* Footer con paginación */}
+          <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 flex items-center justify-between">
+            <span className="text-xs text-surface-400">
+              {data.total} resultado{data.total !== 1 && "s"} — página {data.page} de {data.pages || 1}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => p - 1)}
+                disabled={currentPage <= 1}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                ← Anterior
+              </button>
+              {Array.from({ length: Math.min(data.pages, 5) }, (_, i) => {
+                const p = i + 1;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                      p === currentPage
+                        ? "bg-warning-500 text-white shadow-sm"
+                        : "border border-surface-200 hover:bg-surface-100 text-surface-600"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={currentPage >= (data.pages || 1)}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                Siguiente →
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
 

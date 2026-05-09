@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 interface FilterBarProps {
   nombre: string;
   esAlergeno: boolean | undefined;
@@ -6,6 +8,10 @@ interface FilterBarProps {
   onReset: () => void;
   onExport: () => void;
   isExporting: boolean;
+  canManage?: boolean;
+  onImport?: (file: File) => void;
+  isImporting?: boolean;
+  onDescargarPlantilla?: () => void;
 }
 
 export default function FilterBar({
@@ -16,8 +22,21 @@ export default function FilterBar({
   onReset,
   onExport,
   isExporting,
+  canManage = false,
+  onImport,
+  isImporting = false,
+  onDescargarPlantilla,
 }: FilterBarProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const hasActiveFilters = nombre !== "" || esAlergeno !== undefined;
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file && onImport) {
+      onImport(file);
+      e.target.value = "";
+    }
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -56,6 +75,35 @@ export default function FilterBar({
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Botones de admin */}
+      {canManage && (
+        <>
+          {/* Descargar plantilla */}
+          <button
+            onClick={onDescargarPlantilla}
+            className="flex items-center gap-2 bg-surface-100 hover:bg-surface-200 text-surface-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-surface-300"
+          >
+            📋 Plantilla
+          </button>
+
+          {/* Importar Excel */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+          >
+            {isImporting ? "Importando..." : "⬆ Importar Excel"}
+          </button>
+        </>
+      )}
 
       {/* Exportar Excel */}
       <button

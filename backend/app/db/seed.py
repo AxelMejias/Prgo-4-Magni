@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
-from app.database import engine
-from app.auth.model import Rol, Usuario, UsuarioRol
+from app.core.database import engine
+from app.modules.auth.model import Rol, Usuario, UsuarioRol
 from app.core.security import hash_password
 
 

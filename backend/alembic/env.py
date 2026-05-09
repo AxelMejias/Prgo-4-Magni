@@ -1,25 +1,23 @@
-import os
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 from alembic import context
 
-# Importar todos los modelos para que Alembic los detecte en el metadata
-from app.models.categoria import Categoria  # noqa: F401
-from app.models.ingrediente import Ingrediente  # noqa: F401
-from app.models.producto import Producto  # noqa: F401
-from app.models.links import ProductoCategoria, ProductoIngrediente  # noqa: F401
-from app.auth.model import Usuario, Rol, UsuarioRol, RefreshToken  # noqa: F401
+# ── Importar TODOS los modelos para que Alembic los detecte ───────────────────
+from app.core.links import ProductoCategoria, ProductoIngrediente          # noqa
+from app.modules.auth.model import Usuario, Rol, UsuarioRol, RefreshToken, PasswordResetToken  # noqa
+from app.modules.categorias.model import Categoria                         # noqa
+from app.modules.ingredientes.model import Ingrediente                     # noqa
+from app.modules.productos.model import Producto                           # noqa
+# Agregar aquí los modelos de pedidos, pagos, etc. cuando se implementen
+
+from app.core.config import settings
 
 config = context.config
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-# Sobreescribir URL desde variable de entorno si está disponible
-database_url = os.getenv("DATABASE_URL")
-if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = SQLModel.metadata
 
@@ -27,9 +25,7 @@ target_metadata = SQLModel.metadata
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
+        url=url, target_metadata=target_metadata, literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
     with context.begin_transaction():

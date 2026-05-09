@@ -37,3 +37,15 @@ export interface IngredienteFilters {
   page: number;
   size: number;
 }
+
+export interface ImportErrorRow {
+  fila: number;
+  nombre: string;
+  motivo: string;
+}
+
+export interface ImportarResult {
+  creados: number;
+  omitidos: number;
+  errores: ImportErrorRow[];
+}
