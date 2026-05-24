@@ -1,10 +1,43 @@
 import { NavLink, Outlet, useLocation, Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../shared/store/authStore";
 import { authApi } from "../shared/api/authApi";
+import CartIcon from "../widgets/cart-icon/ui/CartIcon";
 
-// Cada item define qué roles pueden verlo.
-// Array vacío = todos los roles autenticados pueden verlo.
+// Cada item define qué roles pueden verlo. [] = todos los autenticados.
 const navItems = [
+  // ── Store (todos los autenticados) ──────────────────────────────────
+  {
+    to: "/tienda",
+    label: "Tienda",
+    icon: "🛍️",
+    color: "bg-brand-500",
+    roles: [],
+  },
+  {
+    to: "/mis-pedidos",
+    label: "Mis pedidos",
+    icon: "📋",
+    color: "bg-purple-500",
+    roles: ["CLIENT"],
+  },
+  {
+    to: "/mis-direcciones",
+    label: "Mis direcciones",
+    icon: "📍",
+    color: "bg-success-500",
+    roles: ["CLIENT"],
+  },
+
+  // ── Admin Pedidos (Caja / Empleado) ─────────────────────────────────
+  {
+    to: "/admin/pedidos",
+    label: "Pedidos (Caja)",
+    icon: "💳",
+    color: "bg-purple-600",
+    roles: ["ADMIN", "PEDIDOS"],
+  },
+
+  // ── Catálogo (Parcial 1) ────────────────────────────────────────────
   {
     to: "/categorias",
     label: "Categorías",
@@ -16,29 +49,36 @@ const navItems = [
     to: "/ingredientes",
     label: "Ingredientes",
     icon: "🧂",
-    color: "bg-success-500",
+    color: "bg-success-600",
     roles: ["ADMIN", "STOCK"],
   },
   {
     to: "/productos",
     label: "Productos",
     icon: "📦",
-    color: "bg-brand-500",
-    roles: ["ADMIN", "STOCK", "CLIENT"],
+    color: "bg-brand-600",
+    roles: ["ADMIN", "STOCK"],
   },
 ];
 
 const breadcrumbMap: Record<string, { label: string; path: string }> = {
-  categorias:   { label: "Categorías",  path: "/categorias"  },
-  ingredientes: { label: "Ingredientes", path: "/ingredientes" },
-  productos:    { label: "Productos",   path: "/productos"   },
+  tienda:           { label: "Tienda",          path: "/tienda" },
+  carrito:          { label: "Carrito",         path: "/carrito" },
+  checkout:         { label: "Checkout",        path: "/checkout" },
+  "mis-pedidos":    { label: "Mis pedidos",     path: "/mis-pedidos" },
+  "mis-direcciones": { label: "Mis direcciones", path: "/mis-direcciones" },
+  admin:            { label: "Admin",           path: "/admin/pedidos" },
+  pedidos:          { label: "Pedidos",         path: "/admin/pedidos" },
+  categorias:       { label: "Categorías",      path: "/categorias" },
+  ingredientes:     { label: "Ingredientes",    path: "/ingredientes" },
+  productos:        { label: "Productos",       path: "/productos" },
 };
 
 const roleLabels: Record<string, { label: string; color: string }> = {
-  ADMIN:   { label: "Admin",            color: "bg-red-100 text-red-700"     },
-  STOCK:   { label: "Stock",            color: "bg-blue-100 text-blue-700"   },
-  PEDIDOS: { label: "Pedidos",          color: "bg-purple-100 text-purple-700" },
-  CLIENT:  { label: "Cliente",          color: "bg-green-100 text-green-700" },
+  ADMIN:   { label: "Admin",   color: "bg-red-100 text-red-700" },
+  STOCK:   { label: "Stock",   color: "bg-blue-100 text-blue-700" },
+  PEDIDOS: { label: "Pedidos", color: "bg-purple-100 text-purple-700" },
+  CLIENT:  { label: "Cliente", color: "bg-green-100 text-green-700" },
 };
 
 export default function Layout() {
@@ -53,6 +93,9 @@ export default function Layout() {
   const visibleItems = navItems.filter((item) =>
     item.roles.length === 0 || hasRole(item.roles)
   );
+
+  // El carrito solo lo ve quien es CLIENT (ADMIN/STOCK/PEDIDOS no compran)
+  const showCart = hasRole(["CLIENT"]);
 
   // Breadcrumb
   const segments = location.pathname.split("/").filter(Boolean);
@@ -120,6 +163,13 @@ export default function Layout() {
             ))}
           </div>
         </nav>
+
+        {/* ───── ACÁ va el carrito ───── */}
+        {showCart && (
+          <div className="px-3 pb-3 border-t border-white/10 pt-3">
+            <CartIcon />
+          </div>
+        )}
 
         {/* Usuario + roles + logout */}
         {user && (

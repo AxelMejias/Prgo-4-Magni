@@ -15,7 +15,7 @@ const PAGE_SIZE = 5;
 
 export default function IngredientesPage() {
   const queryClient = useQueryClient();
-  const canManage = useAuthStore((s) => s.hasRole(["ADMIN", "STOCK"]));
+  const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
 
   // Estado en URL: ?tab=activos&page=2&nombre=harina&es_alergeno=true
   const [searchParams, setSearchParams] = useSearchParams();

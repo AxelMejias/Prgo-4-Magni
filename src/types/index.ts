@@ -3,6 +3,23 @@ export interface Categoria {
   id: number;
   nombre: string;
   descripcion?: string;
+  parent_id?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CategoriaInput {
+  nombre: string;
+  descripcion?: string;
+  parent_id?: number | null;
+}
+
+export interface PaginatedCategorias {
+  items: Categoria[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
 }
 
 export interface CategoriaInput {

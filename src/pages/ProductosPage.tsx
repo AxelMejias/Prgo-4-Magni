@@ -21,7 +21,7 @@ const PAGE_SIZE = 5;
 export default function ProductosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const canManage = useAuthStore((s) => s.hasRole(["ADMIN", "STOCK"]));
+  const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
 
   // Estado en URL: ?tab=activos&page=2
   const [searchParams, setSearchParams] = useSearchParams();
