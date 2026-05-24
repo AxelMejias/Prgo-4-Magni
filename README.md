@@ -269,6 +269,34 @@ Si no se define, el cliente usa `http://localhost:8000` por defecto.
 
 ---
 
+## Tests
+
+El proyecto usa **Vitest** con jsdom y `@testing-library/react`. Los tests corren sin servidor ni navegador real.
+
+### Cobertura
+
+| Archivo de test | Módulo | Tests |
+|---|---|---|
+| `src/features/pedido-estado/lib/fsm.test.ts` | `fsm.ts` | transiciones staff/cliente, `getNextStates`, `requiereMotivo`, labels |
+| `src/shared/lib/format.test.ts` | `format.ts` | `toNumber`, `formatARS`, `formatDateTime` |
+| `src/features/cart/model/cartStore.test.ts` | `cartStore.ts` | add/remove/update/clear, `totalItems`, `subtotal` |
+| `src/shared/store/authStore.test.ts` | `authStore.ts` | login, logout, `setTokens`, `hasRole` |
+
+### Correr los tests
+
+```bash
+# Correr todos los tests una vez
+npm run test
+
+# Modo watch (re-corre al guardar)
+npm run test:watch
+
+# Con reporte de cobertura
+npm run test:coverage
+```
+
+---
+
 ## Comandos de referencia rápida
 
 ```bash
@@ -280,6 +308,9 @@ npm run build
 
 # Preview del build
 npm run preview
+
+# Tests
+npm run test
 ```
 
 ---
