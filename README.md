@@ -1,28 +1,15 @@
-# 🍔 Food Store
+# 🍔 Food Store — Frontend
 
-Sistema de gestión de pedidos de comida — Trabajo Práctico Integrador  
-**Stack:** React 18 + TypeScript · FastAPI · PostgreSQL · SQLModel
+Aplicación web para la gestión integral de un negocio de comidas. Dos módulos en un mismo proyecto: **Tienda** (clientes) y **Administración** (staff).
 
----
+## Repositorios del proyecto
 
-## Índice
+Este proyecto sigue una arquitectura **polyrepo**: cada capa tiene su propio repositorio independiente.
 
-- [Descripción](#descripción)
-- [Stack tecnológico](#stack-tecnológico)
-- [Arquitectura](#arquitectura)
-- [Requisitos previos](#requisitos-previos)
-- [Instalación y setup](#instalación-y-setup)
-- [Credenciales de acceso](#credenciales-de-acceso)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Endpoints principales](#endpoints-principales)
-- [Roles del sistema](#roles-del-sistema)
-- [Variables de entorno](#variables-de-entorno)
-
----
-
-## Descripción
-
-Food Store es una aplicación web full-stack para la gestión integral de un negocio de comidas. Permite a los clientes explorar el catálogo, gestionar un carrito de compras y realizar pedidos con pago integrado via MercadoPago. Los administradores gestionan el catálogo, el stock, los pedidos y los usuarios desde un panel centralizado.
+| Capa | Repositorio | Rama |
+|---|---|---|
+| 🌐 Frontend (este repo) | [AxelMejias/Prgo-4-Magni](https://github.com/AxelMejias/Prgo-4-Magni) | `Integrador` |
+| 🔧 Backend | [AxelMejias/Profe-Espejo](https://github.com/AxelMejias/Profe-Espejo) | `FoodStoreBack` |
 
 ---
 
@@ -30,131 +17,270 @@ Food Store es una aplicación web full-stack para la gestión integral de un neg
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | React 18 + TypeScript + Vite |
-| Estilos | Tailwind CSS 4 |
+| Framework | React 19 + TypeScript + Vite |
+| Estilos | Tailwind CSS v4 |
 | Estado servidor | TanStack Query v5 |
-| Estado cliente | Zustand v5 |
-| HTTP client | Axios con interceptores JWT |
-| Backend | FastAPI + Python 3.11+ |
-| ORM | SQLModel |
-| Base de datos | PostgreSQL 15 |
-| Migraciones | Alembic |
-| Autenticación | JWT (access 30min + refresh 7 días) |
-| Rate limiting | slowapi |
-| Export Excel | openpyxl |
+| Estado cliente | Zustand v5 con middleware `persist` |
+| HTTP client | Axios con interceptores JWT + `withCredentials` |
+| Routing | React Router DOM v7 |
+| OAuth social | Google OAuth (`@react-oauth/google`) |
 
 ---
 
 ## Arquitectura
 
-El backend sigue una arquitectura **feature-first** con capas estrictas:
+El proyecto sigue **Feature-Sliced Design** con separación estricta entre estado del servidor (TanStack Query) y estado del cliente (Zustand):
 
 ```
-Router → Service → UnitOfWork → Repository → Model
+pages/          → Vistas por ruta
+features/       → Lógica de negocio (cart, pedido-estado, ingredientes-crud…)
+entities/       → Modelos y API clients por entidad (pedido, ingrediente, direccion)
+widgets/        → Componentes compuestos reutilizables
+shared/         → Infraestructura compartida (axiosClient, authStore, ProtectedRoute…)
+components/     → Componentes UI genéricos (Layout, Modal)
+services/       → API clients legacy para categorías, ingredientes y productos
 ```
-
-Cada módulo contiene sus propios archivos `model.py`, `schemas.py`, `repository.py`, `service.py` y `router.py`. Ninguna capa importa de una capa superior.
-
-El frontend sigue **Feature-Sliced Design** con separación estricta entre estado del servidor (TanStack Query) y estado del cliente (Zustand).
 
 ---
 
 ## Requisitos previos
 
-| Herramienta | Versión mínima | Descarga |
-|---|---|---|
-| Python | 3.11+ | https://www.python.org/downloads |
-| Node.js | 18+ | https://nodejs.org |
-| PostgreSQL | 15+ | https://www.postgresql.org/download |
+| Herramienta | Versión mínima |
+|---|---|
+| Node.js | 18+ |
+| npm | 9+ |
+
+El backend debe estar corriendo en `http://localhost:8000`.
 
 ---
 
 ## Instalación y setup
 
-### 1. Clonar el repositorio
-
 ```bash
+# 1. Clonar el repositorio
 git clone https://github.com/AxelMejias/Prgo-4-Magni.git
 cd Prgo-4-Magni
-git checkout Integrador
-```
 
-### 2. Base de datos
-
-Abrí pgAdmin o psql y creá la base de datos:
-
-```sql
-CREATE DATABASE foodstore_db;
-```
-
-### 3. Backend
-
-Todos los comandos desde la carpeta `backend/`.
-
-```bash
-cd backend
-```
-
-**Crear y activar el entorno virtual:**
-
-```bash
-# Windows (PowerShell)
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-
-# Mac / Linux
-python -m venv .venv
-source .venv/bin/activate
-```
-
-**Instalar dependencias:**
-
-```bash
-pip install -r requirements.txt
-```
-
-**Configurar la base de datos:**
-
-Editá `app/core/config.py` y cambiá la contraseña de PostgreSQL:
-
-```python
-DATABASE_URL: str = "postgresql://postgres:TU_CONTRASEÑA@localhost:5432/foodstore_db"
-```
-
-**Correr migraciones:**
-
-```bash
-alembic upgrade head
-```
-
-**Cargar datos iniciales:**
-
-```bash
-python -m app.db.seed
-```
-
-**Iniciar el servidor:**
-
-```bash
-uvicorn main:app --reload
-```
-
-El backend queda disponible en:
-- API: http://localhost:8000
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-### 4. Frontend
-
-Abrí una **nueva terminal** (sin cerrar el backend).
-
-```bash
-cd frontend
+# 2. Instalar dependencias
 npm install
+
+# 3. Iniciar en modo desarrollo
 npm run dev
 ```
 
 El frontend queda disponible en: http://localhost:5173
+
+---
+
+## Módulos
+
+### 🛍️ Módulo Store (Cliente)
+
+Accesible para usuarios con rol `CLIENT`.
+
+| Ruta | Descripción |
+|---|---|
+| `/tienda` | Catálogo de productos con búsqueda y paginación |
+| `/carrito` | Carrito de compras (persistido en localStorage) |
+| `/checkout` | Confirmación de pedido: dirección, forma de pago y notas |
+| `/mis-pedidos` | Listado de pedidos propios con filtro por estado |
+| `/mis-pedidos/:id` | Detalle del pedido con historial de estados |
+| `/mis-direcciones` | CRUD de direcciones de entrega |
+
+**Estado del carrito** — Zustand con middleware `persist`:
+- Persiste en `localStorage` bajo la clave `cart-storage`
+- Snapshot de nombre y precio al agregar el producto
+- Se limpia automáticamente al confirmar el pedido
+
+### 🔧 Módulo Administración (Staff)
+
+| Ruta | Roles | Descripción |
+|---|---|---|
+| `/categorias` | ADMIN | CRUD de categorías jerárquicas |
+| `/ingredientes` | ADMIN, STOCK | CRUD de ingredientes con filtros |
+| `/productos` | ADMIN, STOCK | CRUD de productos con stock y disponibilidad |
+| `/productos/:id` | ADMIN, STOCK | Detalle y edición de producto |
+| `/admin/pedidos` | ADMIN, PEDIDOS | Panel de pedidos: avanzar estados del FSM |
+| `/admin/pedidos/:id` | ADMIN, PEDIDOS | Detalle y transición de estado del pedido |
+
+**Pantalla de Pedidos (Caja/Empleado):**
+- Rol `ADMIN`: puede hacer todas las transiciones del FSM y cancelar desde cualquier estado
+- Rol `PEDIDOS`: puede avanzar el flujo principal (CONFIRMADO → EN_PREP → EN_CAMINO → ENTREGADO) y cancelar
+
+---
+
+## Autenticación
+
+### Cookie HTTPOnly
+
+El backend setea el `access_token` como cookie HTTPOnly en cada login/refresh. El axiosClient envía la cookie automáticamente en cada request gracias a `withCredentials: true`.
+
+### Flujo de tokens
+
+1. Login → backend retorna `access_token` + `refresh_token` en el body Y setea cookie HTTPOnly
+2. `access_token` se guarda en Zustand (`authStore`)
+3. El interceptor de Axios agrega `Authorization: Bearer {token}` en cada request
+4. Si la respuesta es `401`, el interceptor intenta renovar con el `refresh_token`
+5. Si el refresh falla → logout automático y redirección a `/login`
+
+### Protección de rutas
+
+`ProtectedRoute` verifica autenticación y opcionalmente los roles requeridos:
+
+```tsx
+// Solo autenticados
+<Route element={<ProtectedRoute />}>...</Route>
+
+// Solo ADMIN
+<Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>...</Route>
+
+// ADMIN o PEDIDOS
+<Route element={<ProtectedRoute allowedRoles={["ADMIN", "PEDIDOS"]} />}>...</Route>
+```
+
+---
+
+## Estado del servidor — TanStack Query
+
+Ejemplos de implementación en el proyecto:
+
+```tsx
+// useQuery — listado de pedidos
+const { data, isLoading } = useQuery({
+  queryKey: ["mis-pedidos", page, estadoParam],
+  queryFn: () => pedidoApi.getAll({ page, size: 10, estado_codigo: estadoParam }),
+});
+
+// useMutation — avanzar estado del pedido
+const avanzarMutation = useMutation({
+  mutationFn: ({ estado_hacia, motivo }) =>
+    pedidoApi.avanzarEstado(pedidoId, { estado_hacia, motivo }),
+  onSuccess: () => {
+    // Invalidar caché para refrescar datos
+    queryClient.invalidateQueries({ queryKey: ["pedidos"] });
+  },
+});
+```
+
+---
+
+## Máquina de estados de pedidos (FSM)
+
+```
+PENDIENTE → CONFIRMADO → EN_PREP → EN_CAMINO → ENTREGADO
+          ↘            ↘         ↘
+                          CANCELADO
+```
+
+La lógica del FSM está en `src/features/pedido-estado/lib/fsm.ts` y determina qué transiciones son válidas según el estado actual y el rol del usuario.
+
+| Estado | Color UI |
+|---|---|
+| PENDIENTE | Amber |
+| CONFIRMADO | Blue |
+| EN_PREP | Cyan |
+| EN_CAMINO | Violet |
+| ENTREGADO | Green |
+| CANCELADO | Red |
+
+---
+
+## Estructura del proyecto
+
+```
+src/
+├── App.tsx                      # Configuración de rutas
+├── main.tsx                     # Entry point + GoogleOAuthProvider
+├── index.css                    # Tema Tailwind (tokens de color, fuentes)
+├── components/
+│   ├── Layout.tsx               # Sidebar con nav filtrada por rol
+│   └── Modal.tsx                # Modal genérico reutilizable
+├── entities/
+│   ├── direccion/
+│   │   ├── api.ts               # CRUD direcciones de entrega
+│   │   └── model.ts
+│   ├── ingrediente/
+│   │   ├── api.ts
+│   │   └── model.ts
+│   └── pedido/
+│       ├── api.ts               # getAll, getById, create, avanzar, cancelar
+│       └── model.ts             # tipos: Pedido, DetallePedido, EstadoCodigo…
+├── features/
+│   ├── cart/
+│   │   └── model/cartStore.ts   # Zustand + persist (localStorage)
+│   ├── ingredientes-crud/
+│   │   └── ui/IngredienteModal.tsx
+│   ├── ingredientes-filter/
+│   │   └── ui/FilterBar.tsx
+│   └── pedido-estado/
+│       ├── lib/fsm.ts           # Mapa de transiciones válidas por rol
+│       └── ui/
+│           ├── EstadoBadge.tsx
+│           └── HistorialList.tsx
+├── pages/
+│   ├── LoginPage.tsx
+│   ├── ForgotPasswordPage.tsx
+│   ├── ResetPasswordPage.tsx
+│   ├── HomeStorePage.tsx        # Catálogo con búsqueda y paginación
+│   ├── CarritoPage.tsx          # Vista del carrito
+│   ├── CheckoutPage.tsx         # Confirmar pedido (dirección + forma de pago)
+│   ├── MisPedidosPage.tsx       # Listado de pedidos del cliente
+│   ├── MisDireccionesPage.tsx   # CRUD de direcciones de entrega
+│   ├── PedidoDetallePage.tsx    # Detalle + transiciones FSM
+│   ├── AdminPedidosPage.tsx     # Panel staff: gestión de pedidos
+│   ├── CategoriasPage.tsx
+│   ├── IngredientesPage.tsx
+│   ├── ProductosPage.tsx
+│   └── ProductoDetallePage.tsx
+├── services/
+│   └── api.ts                   # API clients para categorías, ingredientes, productos
+├── shared/
+│   ├── api/
+│   │   ├── axiosClient.ts       # Instancia Axios + interceptores + withCredentials
+│   │   └── authApi.ts           # login, register, logout, getMe, googleLogin…
+│   ├── lib/
+│   │   └── format.ts            # formatARS, formatDateTime, toNumber
+│   ├── store/
+│   │   └── authStore.ts         # Zustand: accessToken, refreshToken, user, hasRole
+│   ├── types/
+│   │   └── auth.ts              # User, TokenResponse, LoginRequest…
+│   └── ui/
+│       └── ProtectedRoute.tsx   # Guard de rutas por autenticación y rol
+├── types/
+│   └── index.ts                 # Tipos compartidos: Categoria, Producto, Ingrediente…
+└── widgets/
+    ├── cart-icon/
+    │   └── ui/CartIcon.tsx      # Ícono del carrito con badge de cantidad
+    └── ingredientes-table/
+        └── ui/IngredientesTable.tsx
+```
+
+---
+
+## Variables de entorno
+
+Crear un archivo `.env` en la raíz del proyecto:
+
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+Si no se define, el cliente usa `http://localhost:8000` por defecto.
+
+---
+
+## Comandos de referencia rápida
+
+```bash
+# Desarrollo
+npm run dev
+
+# Build de producción
+npm run build
+
+# Preview del build
+npm run preview
+```
 
 ---
 
@@ -164,137 +290,4 @@ El frontend queda disponible en: http://localhost:5173
 |---|---|---|
 | Administrador | admin@foodstore.com | Admin1234! |
 
-> El usuario administrador se crea automáticamente al correr el seed. Nuevos usuarios que se registran desde la pantalla de login reciben el rol CLIENT automáticamente.
-
----
-
-## Estructura del proyecto
-
-```
-Prgo-4-Magni/
-├── backend/
-│   ├── main.py                  # Entry point FastAPI
-│   ├── requirements.txt
-│   ├── alembic/                 # Migraciones de base de datos
-│   │   └── versions/
-│   └── app/
-│       ├── core/                # Infraestructura compartida
-│       │   ├── config.py
-│       │   ├── database.py
-│       │   ├── security.py
-│       │   ├── dependencies.py  # get_current_user, require_role
-│       │   ├── links.py         # Tablas pivot N:N
-│       │   ├── base_repository.py
-│       │   └── unit_of_work.py
-│       ├── db/
-│       │   └── seed.py          # Datos iniciales
-│       └── modules/             # Arquitectura feature-first
-│           ├── auth/            # Login, registro, JWT
-│           ├── categorias/      # CRUD categorías jerárquicas
-│           ├── ingredientes/    # CRUD ingredientes + export Excel
-│           ├── productos/       # CRUD productos con stock
-│           ├── pedidos/         # FSM de pedidos (en desarrollo)
-│           ├── pagos/           # MercadoPago (en desarrollo)
-│           ├── direcciones/     # Direcciones de entrega (en desarrollo)
-│           ├── admin/           # Dashboard métricas (en desarrollo)
-│           └── usuarios/        # Gestión usuarios (en desarrollo)
-└── frontend/
-    └── src/
-        ├── components/          # Layout, Modal
-        ├── entities/            # Modelos y API por entidad
-        ├── features/            # Lógica de features
-        ├── pages/               # Páginas por ruta
-        ├── services/            # API clients
-        ├── shared/
-        │   ├── api/             # axiosClient con interceptores JWT
-        │   ├── store/           # authStore (Zustand)
-        │   └── ui/              # ProtectedRoute
-        └── widgets/             # Componentes compuestos
-```
-
----
-
-## Endpoints principales
-
-Todos los endpoints usan el prefijo `/api/v1`.
-
-| Método | Endpoint | Descripción | Rol |
-|---|---|---|---|
-| POST | /api/v1/auth/register | Registrar usuario | Público |
-| POST | /api/v1/auth/login | Iniciar sesión | Público |
-| POST | /api/v1/auth/refresh | Renovar token | Público |
-| POST | /api/v1/auth/logout | Cerrar sesión | Autenticado |
-| GET | /api/v1/auth/me | Usuario actual | Autenticado |
-| GET | /api/v1/categorias/ | Listar categorías | Autenticado |
-| POST | /api/v1/categorias/ | Crear categoría | ADMIN, STOCK |
-| PUT | /api/v1/categorias/{id} | Actualizar categoría | ADMIN, STOCK |
-| DELETE | /api/v1/categorias/{id} | Baja lógica | ADMIN, STOCK |
-| GET | /api/v1/ingredientes/ | Listar (paginado) | Autenticado |
-| POST | /api/v1/ingredientes/ | Crear ingrediente | ADMIN, STOCK |
-| PUT | /api/v1/ingredientes/{id} | Actualizar | ADMIN, STOCK |
-| DELETE | /api/v1/ingredientes/{id} | Baja lógica | ADMIN, STOCK |
-| GET | /api/v1/ingredientes/exportar | Exportar Excel | ADMIN, STOCK |
-| GET | /api/v1/productos/ | Listar (paginado) | Autenticado |
-| POST | /api/v1/productos/ | Crear producto | ADMIN, STOCK |
-| PUT | /api/v1/productos/{id} | Actualizar | ADMIN, STOCK |
-| PATCH | /api/v1/productos/{id}/disponibilidad | Toggle disponibilidad | ADMIN, STOCK |
-| DELETE | /api/v1/productos/{id} | Baja lógica | ADMIN, STOCK |
-
-La documentación interactiva completa está en http://localhost:8000/docs
-
----
-
-## Roles del sistema
-
-| Rol | Código | Permisos |
-|---|---|---|
-| Administrador | ADMIN | Acceso total al sistema |
-| Gestor de Stock | STOCK | Gestión de catálogo e inventario |
-| Gestor de Pedidos | PEDIDOS | Gestión del ciclo de vida de pedidos |
-| Cliente | CLIENT | Catálogo, carrito y sus propios pedidos |
-
----
-
-## Variables de entorno
-
-### Backend — `app/core/config.py`
-
-| Variable | Descripción | Default |
-|---|---|---|
-| DATABASE_URL | Cadena de conexión PostgreSQL | postgresql://postgres:postgres@localhost:5432/foodstore_db |
-| SECRET_KEY | Clave para firmar JWT (mín. 32 chars) | — |
-| ALGORITHM | Algoritmo JWT | HS256 |
-| ACCESS_TOKEN_EXPIRE_MINUTES | Duración del access token | 30 |
-| REFRESH_TOKEN_EXPIRE_DAYS | Duración del refresh token | 7 |
-| CORS_ORIGINS | Orígenes permitidos | ["http://localhost:5173"] |
-| FRONTEND_URL | URL del frontend | http://localhost:5173 |
-
-### Frontend — `frontend/.env`
-
-| Variable | Descripción |
-|---|---|
-| VITE_API_URL | URL base del backend (http://localhost:8000) |
-
----
-
-## Comandos de referencia rápida
-
-```bash
-# Arrancar backend (Windows)
-cd backend
-.venv\Scripts\Activate.ps1
-uvicorn main:app --reload
-
-# Arrancar frontend
-cd frontend
-npm run dev
-
-# Correr migraciones
-cd backend && alembic upgrade head
-
-# Cargar datos iniciales
-cd backend && python -m app.db.seed
-
-# Ver estado de migraciones
-cd backend && alembic current
-```
+> Los usuarios que se registran reciben el rol `CLIENT` automáticamente.
