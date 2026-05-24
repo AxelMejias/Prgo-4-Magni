@@ -158,4 +158,14 @@ export const productosApi = {
   update: (id: number, data: ProductoUpdate) =>
     put<ProductoDetalle>(`/api/v1/productos/${id}`, data),
   delete: (id: number) => del(`/api/v1/productos/${id}`),
+
+  getInactivos: (page = 1, size = 20) =>
+    get<PaginatedProductos>(`/api/v1/productos/inactivos?page=${page}&size=${size}`),
+
+  reactivar: (id: number) =>
+    fetch(`${BASE}/api/v1/productos/${id}/reactivar`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      credentials: "include",
+    }).then((r) => handleResponse<ProductoDetalle>(r)),
 };
