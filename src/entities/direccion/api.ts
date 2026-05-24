@@ -1,9 +1,38 @@
 import axiosClient from "../../shared/api/axiosClient";
-import type {
-  Direccion,
-  PaginatedDirecciones,
-  DireccionCreate,
-} from "./model";
+
+export interface DireccionCreate {
+  alias?: string;
+  linea1: string;
+  linea2?: string;
+  ciudad: string;
+  provincia?: string;
+  codigo_postal?: string;
+  es_principal?: boolean;
+}
+
+export interface DireccionUpdate extends Partial<DireccionCreate> {}
+
+export interface Direccion {
+  id: number;
+  usuario_id: number;
+  alias?: string | null;
+  linea1: string;
+  linea2?: string | null;
+  ciudad: string;
+  provincia?: string | null;
+  codigo_postal?: string | null;
+  es_principal: boolean;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface PaginatedDirecciones {
+  items: Direccion[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
 
 function extractMsg(error: unknown): Error {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -17,30 +46,22 @@ function extractMsg(error: unknown): Error {
   return error instanceof Error ? error : new Error("Error inesperado");
 }
 
-export type DireccionUpdate = Partial<DireccionCreate>;
-
 export const direccionApi = {
-  getAll: async (page = 1, size = 50): Promise<PaginatedDirecciones> => {
+  getAll: async (page = 1, size = 20): Promise<PaginatedDirecciones> => {
     const { data } = await axiosClient.get<PaginatedDirecciones>(
-      "/api/v1/direcciones/",
-      { params: { page, size } }
+      `/api/v1/direcciones/?page=${page}&size=${size}`
     );
     return data;
   },
 
   getById: async (id: number): Promise<Direccion> => {
-    const { data } = await axiosClient.get<Direccion>(
-      `/api/v1/direcciones/${id}`
-    );
+    const { data } = await axiosClient.get<Direccion>(`/api/v1/direcciones/${id}`);
     return data;
   },
 
   create: async (payload: DireccionCreate): Promise<Direccion> => {
     try {
-      const { data } = await axiosClient.post<Direccion>(
-        "/api/v1/direcciones/",
-        payload
-      );
+      const { data } = await axiosClient.post<Direccion>("/api/v1/direcciones/", payload);
       return data;
     } catch (err) {
       throw extractMsg(err);
@@ -49,10 +70,7 @@ export const direccionApi = {
 
   update: async (id: number, payload: DireccionUpdate): Promise<Direccion> => {
     try {
-      const { data } = await axiosClient.put<Direccion>(
-        `/api/v1/direcciones/${id}`,
-        payload
-      );
+      const { data } = await axiosClient.put<Direccion>(`/api/v1/direcciones/${id}`, payload);
       return data;
     } catch (err) {
       throw extractMsg(err);
@@ -60,10 +78,12 @@ export const direccionApi = {
   },
 
   marcarPrincipal: async (id: number): Promise<Direccion> => {
-    const { data } = await axiosClient.patch<Direccion>(
-      `/api/v1/direcciones/${id}/principal`
-    );
-    return data;
+    try {
+      const { data } = await axiosClient.patch<Direccion>(`/api/v1/direcciones/${id}/principal`);
+      return data;
+    } catch (err) {
+      throw extractMsg(err);
+    }
   },
 
   delete: async (id: number): Promise<void> => {

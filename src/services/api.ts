@@ -14,7 +14,7 @@ import { useAuthStore } from "../shared/store/authStore";
 
 const BASE = "http://localhost:8000";
 
-// ─── helpers ─────────────────────────────────────────────
+// ─── helpers ─────────────────────────────────────────────────────────────────
 const fieldLabels: Record<string, string> = {
   nombre: "Nombre",
   precio: "Precio",
@@ -40,7 +40,6 @@ function parsePydanticMsg(msg: string): string {
 }
 
 function extractDetail(detail: unknown): string {
-  // RFC 7807: detail es un objeto { detail: "...", code: "..." }
   if (typeof detail === "object" && detail !== null && "detail" in detail) {
     return String((detail as Record<string, unknown>).detail);
   }
@@ -81,6 +80,7 @@ function post<T>(url: string, data: unknown): Promise<T> {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(data),
+    credentials: "include",
   }).then((r) => handleResponse<T>(r));
 }
 
@@ -89,67 +89,73 @@ function put<T>(url: string, data: unknown): Promise<T> {
     method: "PUT",
     headers: authHeaders(),
     body: JSON.stringify(data),
+    credentials: "include",
   }).then((r) => handleResponse<T>(r));
 }
 
 function del(url: string): Promise<void> {
-  return fetch(`${BASE}${url}`, { method: "DELETE", headers: authHeaders() }).then((r) =>
-    handleResponse<void>(r)
-  );
+  return fetch(`${BASE}${url}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+    credentials: "include",
+  }).then((r) => handleResponse<void>(r));
 }
 
 function get<T>(url: string): Promise<T> {
-  return fetch(`${BASE}${url}`, { headers: authHeaders() }).then((r) => handleResponse<T>(r));
+  return fetch(`${BASE}${url}`, {
+    headers: authHeaders(),
+    credentials: "include",
+  }).then((r) => handleResponse<T>(r));
 }
 
-// ─── Categorías ──────────────────────────────────────────
+// ─── Categorías ──────────────────────────────────────────────────────────────
 export const categoriasApi = {
-  getAll: () => get<{ items: Categoria[]; total: number }>("/api/v1/categorias/?page=1&size=100").then(r => r.items),
+  getAll: () =>
+    get<{ items: Categoria[]; total: number }>("/api/v1/categorias/?page=1&size=100").then(
+      (r) => r.items
+    ),
   getPaginated: (page = 1, size = 5) =>
     get<PaginatedCategorias>(`/api/v1/categorias/?page=${page}&size=${size}`),
   getById: (id: number) => get<Categoria>(`/api/v1/categorias/${id}`),
   create: (data: CategoriaInput) => post<Categoria>("/api/v1/categorias/", data),
-  update: (id: number, data: CategoriaInput) => put<Categoria>(`/api/v1/categorias/${id}`, data),
+  update: (id: number, data: CategoriaInput) =>
+    put<Categoria>(`/api/v1/categorias/${id}`, data),
   delete: (id: number) => del(`/api/v1/categorias/${id}`),
 };
 
-// ─── Ingredientes — apunta a la nueva URL con paginación ─
+// ─── Ingredientes ─────────────────────────────────────────────────────────────
 export const ingredientesApi = {
   getAll: () =>
-    get<{ items: Ingrediente[] }>("/api/v1/ingredientes/?page=1&size=100").then((r) => r.items),
+    get<{ items: Ingrediente[] }>("/api/v1/ingredientes/?page=1&size=100").then(
+      (r) => r.items
+    ),
   getById: (id: number) => get<Ingrediente>(`/api/v1/ingredientes/${id}`),
   create: (data: IngredienteInput) => post<Ingrediente>("/api/v1/ingredientes/", data),
   update: (id: number, data: IngredienteInput) =>
     put<Ingrediente>(`/api/v1/ingredientes/${id}`, data),
   delete: (id: number) => del(`/api/v1/ingredientes/${id}`),
-  getInactivos: (page = 1, size = 20) =>
-    get<{ items: Ingrediente[]; total: number; page: number; size: number; pages: number }>(
-      `/api/v1/ingredientes/inactivos?page=${page}&size=${size}`
-    ),
-  reactivar: (id: number) =>
-    fetch(`${BASE}/api/v1/ingredientes/${id}/reactivar`, { method: "PATCH", headers: authHeaders() }).then((r) =>
-      handleResponse<Ingrediente>(r)
-    ),
 };
 
-// ─── Productos ───────────────────────────────────────────
+// ─── Productos ────────────────────────────────────────────────────────────────
 export const productosApi = {
-  getAll: (page = 1, size = 20, params?: { nombre?: string; solo_disponibles?: boolean }) => {
+  getAll: (
+    page = 1,
+    size = 20,
+    params?: { nombre?: string; solo_disponibles?: boolean }
+  ) => {
     const qs = new URLSearchParams({ page: String(page), size: String(size) });
     if (params?.nombre) qs.set("nombre", params.nombre);
-    if (params?.solo_disponibles !== undefined) qs.set("solo_disponibles", String(params.solo_disponibles));
+    if (params?.solo_disponibles !== undefined)
+      qs.set("solo_disponibles", String(params.solo_disponibles));
     return get<PaginatedProductos>(`/api/v1/productos/?${qs}`);
   },
   getAllForSelect: () =>
-    get<PaginatedProductos>("/api/v1/productos/?page=1&size=100&solo_disponibles=false").then((r) => r.items),
+    get<PaginatedProductos>(
+      "/api/v1/productos/?page=1&size=100&solo_disponibles=false"
+    ).then((r) => r.items),
   getById: (id: number) => get<ProductoDetalle>(`/api/v1/productos/${id}`),
   create: (data: ProductoCreate) => post<ProductoDetalle>("/api/v1/productos/", data),
-  update: (id: number, data: ProductoUpdate) => put<ProductoDetalle>(`/api/v1/productos/${id}`, data),
+  update: (id: number, data: ProductoUpdate) =>
+    put<ProductoDetalle>(`/api/v1/productos/${id}`, data),
   delete: (id: number) => del(`/api/v1/productos/${id}`),
-  getInactivos: (page = 1, size = 20) =>
-    get<PaginatedProductos>(`/api/v1/productos/inactivos?page=${page}&size=${size}`),
-  reactivar: (id: number) =>
-    fetch(`${BASE}/api/v1/productos/${id}/reactivar`, { method: "PATCH", headers: authHeaders() }).then((r) =>
-      handleResponse<ProductoDetalle>(r)
-    ),
 };

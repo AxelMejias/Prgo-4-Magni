@@ -1,14 +1,15 @@
 import axios from "axios";
 import { useAuthStore } from "../store/authStore";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const axiosClient = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
-// Agrega el Bearer token en cada request
+
 axiosClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
@@ -17,7 +18,7 @@ axiosClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Si recibe 401, intenta refrescar el token y reintenta la request original
+
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -28,7 +29,6 @@ axiosClient.interceptors.response.use(
 
       const refreshToken = useAuthStore.getState().refreshToken;
       if (!refreshToken) {
-        // Si ya estamos en /login no redirigir (evita recargar la página en credenciales inválidas)
         if (window.location.pathname !== "/login") {
           useAuthStore.getState().logout();
           window.location.href = "/login";
@@ -37,9 +37,11 @@ axiosClient.interceptors.response.use(
       }
 
       try {
-        const { data } = await axios.post(`${BASE_URL}/api/v1/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
+        const { data } = await axios.post(
+          `${BASE_URL}/api/v1/auth/refresh`,
+          { refresh_token: refreshToken },
+          { withCredentials: true }
+        );
         useAuthStore.getState().setTokens(data.access_token, data.refresh_token);
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return axiosClient(original);
