@@ -1,4 +1,3 @@
-// src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -20,6 +19,7 @@ import HomeStorePage from "./pages/HomeStorePage";
 import CarritoPage from "./pages/CarritoPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import MisPedidosPage from "./pages/MisPedidosPage";
+import MisDireccionesPage from "./pages/MisDireccionesPage";
 import PedidoDetallePage from "./pages/PedidoDetallePage";
 
 // Admin Pedidos (Staff)
@@ -47,21 +47,24 @@ export default function App() {
           {/* ── Protegidas: autenticado ─────────────────────── */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              {/* Default landing — depende del rol; lo dejamos en /tienda y
-                  el Layout se encarga de mostrar lo que cada rol puede ver */}
               <Route index element={<Navigate to="/tienda" replace />} />
 
               {/* Store — accesible por todos los autenticados */}
               <Route path="/tienda"     element={<HomeStorePage />} />
               <Route path="/carrito"    element={<CarritoPage />} />
               <Route path="/checkout"   element={<CheckoutPage />} />
-              <Route path="/mis-pedidos"        element={<MisPedidosPage />} />
-              <Route path="/mis-pedidos/:id"    element={<PedidoDetallePage />} />
+              <Route path="/mis-pedidos"     element={<MisPedidosPage />} />
+              <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
+
+              {/* ← NUEVO: Direcciones solo para CLIENT */}
+              <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
+                <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
+              </Route>
 
               {/* Admin Pedidos — solo ADMIN/PEDIDOS */}
               <Route element={<ProtectedRoute allowedRoles={["ADMIN", "PEDIDOS"]} />}>
-                <Route path="/admin/pedidos"      element={<AdminPedidosPage />} />
-                <Route path="/admin/pedidos/:id"  element={<PedidoDetallePage />} />
+                <Route path="/admin/pedidos"     element={<AdminPedidosPage />} />
+                <Route path="/admin/pedidos/:id" element={<PedidoDetallePage />} />
               </Route>
 
               {/* Admin catálogo (P1) — solo ADMIN/STOCK */}
@@ -69,8 +72,8 @@ export default function App() {
                 <Route path="/categorias" element={<CategoriasPage />} />
               </Route>
               <Route element={<ProtectedRoute allowedRoles={["ADMIN", "STOCK"]} />}>
-                <Route path="/ingredientes" element={<IngredientesPage />} />
-                <Route path="/productos"    element={<ProductosPage />} />
+                <Route path="/ingredientes"  element={<IngredientesPage />} />
+                <Route path="/productos"     element={<ProductosPage />} />
                 <Route path="/productos/:id" element={<ProductoDetallePage />} />
               </Route>
 
@@ -85,7 +88,6 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
