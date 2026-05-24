@@ -1,1 +1,0 @@
-"""Service de pedidos — placeholder."""
