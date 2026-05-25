@@ -34,7 +34,7 @@ const navItems = [
     label: "Pedidos (Caja)",
     icon: "💳",
     color: "bg-purple-600",
-    roles: ["ADMIN", "PEDIDOS"],
+    roles: ["ADMIN", "COCINERO"],
   },
 
   // ── Gestión de usuarios ─────────────────────────────────────────────
@@ -87,7 +87,7 @@ const breadcrumbMap: Record<string, { label: string; path: string }> = {
 const roleLabels: Record<string, { label: string; color: string }> = {
   ADMIN:   { label: "Admin",   color: "bg-red-100 text-red-700" },
   STOCK:   { label: "Stock",   color: "bg-blue-100 text-blue-700" },
-  PEDIDOS: { label: "Pedidos", color: "bg-purple-100 text-purple-700" },
+  COCINERO: { label: "Cocinero", color: "bg-purple-100 text-purple-700" },
   CLIENT:  { label: "Cliente", color: "bg-green-100 text-green-700" },
 };
 
@@ -104,7 +104,7 @@ export default function Layout() {
     item.roles.length === 0 || hasRole(item.roles)
   );
 
-  // El carrito solo lo ve quien es CLIENT (ADMIN/STOCK/PEDIDOS no compran)
+  // El carrito solo lo ve quien es CLIENT (ADMIN/STOCK/COCINERO no compran)
   const showCart = hasRole(["CLIENT"]);
 
   // Breadcrumb

@@ -96,7 +96,7 @@ export default function ProductoDetallePage() {
                 <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold ${
                   producto.disponible ? "bg-success-50 text-success-700" : "bg-surface-100 text-surface-500"
                 }`}>
-                  {producto.disponible ? "Activo" : "Inactivo"}
+                  {producto.disponible ? "Visible" : "Oculto"}
                 </span>
                 <span className="inline-flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">
                   Stock: {producto.stock_cantidad} u.
@@ -139,7 +139,7 @@ export default function ProductoDetallePage() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-surface-500 mb-1.5 uppercase tracking-wider">
-              Disponible en tienda
+              Visibilidad en tienda
             </label>
             <button
               type="button"
@@ -151,7 +151,7 @@ export default function ProductoDetallePage() {
               }`}
             >
               <span className={`w-3 h-3 rounded-full ${disponibleInput ? "bg-success-500" : "bg-surface-400"}`} />
-              {disponibleInput ? "Activo" : "Inactivo"}
+              {disponibleInput ? "Visible" : "Oculto"}
             </button>
           </div>
           <div className="flex items-center gap-3">
