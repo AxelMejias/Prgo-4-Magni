@@ -489,7 +489,6 @@ export default function ProductosPage() {
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              required
               className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
               placeholder="Ej: Pan artesanal"
             />
@@ -516,11 +515,9 @@ export default function ProductosPage() {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 text-sm font-medium">$</span>
               <input
                 type="number"
-                min="0"
                 step="0.01"
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
-                required
                 className="w-full border border-surface-300 rounded-xl pl-8 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
                 placeholder="500"
               />
