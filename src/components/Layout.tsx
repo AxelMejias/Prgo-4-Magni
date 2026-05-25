@@ -37,6 +37,15 @@ const navItems = [
     roles: ["ADMIN", "PEDIDOS"],
   },
 
+  // ── Gestión de usuarios ─────────────────────────────────────────────
+  {
+    to: "/admin/usuarios",
+    label: "Usuarios",
+    icon: "👥",
+    color: "bg-red-500",
+    roles: ["ADMIN"],
+  },
+
   // ── Catálogo (Parcial 1) ────────────────────────────────────────────
   {
     to: "/categorias",
@@ -69,6 +78,7 @@ const breadcrumbMap: Record<string, { label: string; path: string }> = {
   "mis-direcciones": { label: "Mis direcciones", path: "/mis-direcciones" },
   admin:            { label: "Admin",           path: "/admin/pedidos" },
   pedidos:          { label: "Pedidos",         path: "/admin/pedidos" },
+  usuarios:         { label: "Usuarios",        path: "/admin/usuarios" },
   categorias:       { label: "Categorías",      path: "/categorias" },
   ingredientes:     { label: "Ingredientes",    path: "/ingredientes" },
   productos:        { label: "Productos",       path: "/productos" },

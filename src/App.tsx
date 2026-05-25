@@ -24,6 +24,7 @@ import PedidoDetallePage from "./pages/PedidoDetallePage";
 
 // Admin Pedidos (Staff)
 import AdminPedidosPage from "./pages/AdminPedidosPage";
+import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +66,11 @@ export default function App() {
               <Route element={<ProtectedRoute allowedRoles={["ADMIN", "PEDIDOS"]} />}>
                 <Route path="/admin/pedidos"     element={<AdminPedidosPage />} />
                 <Route path="/admin/pedidos/:id" element={<PedidoDetallePage />} />
+              </Route>
+
+              {/* Admin Usuarios — solo ADMIN */}
+              <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+                <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
               </Route>
 
               {/* Admin catálogo (P1) — solo ADMIN/STOCK */}
