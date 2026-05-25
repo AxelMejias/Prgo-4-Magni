@@ -119,7 +119,7 @@ describe("authStore", () => {
 
     it("retorna false si el usuario no tiene ninguno de los roles pedidos", () => {
       useAuthStore.getState().login("t", "r", makeUser(["CLIENT"]));
-      expect(useAuthStore.getState().hasRole(["ADMIN", "PEDIDOS"])).toBe(false);
+      expect(useAuthStore.getState().hasRole(["ADMIN", "COCINERO"])).toBe(false);
     });
 
     it("retorna false con lista vacía de roles requeridos", () => {
@@ -141,8 +141,8 @@ describe("authStore", () => {
     });
 
     it("usuario con múltiples roles — cualquiera hace match", () => {
-      useAuthStore.getState().login("t", "r", makeUser(["CLIENT", "PEDIDOS"]));
-      expect(useAuthStore.getState().hasRole(["PEDIDOS"])).toBe(true);
+      useAuthStore.getState().login("t", "r", makeUser(["CLIENT", "COCINERO"]));
+      expect(useAuthStore.getState().hasRole(["COCINERO"])).toBe(true);
     });
   });
 });
