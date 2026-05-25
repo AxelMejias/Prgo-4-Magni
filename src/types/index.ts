@@ -86,6 +86,8 @@ export interface ProductoDetalle {
   nombre: string;
   descripcion?: string;
   precio: number;
+  stock_cantidad: number;
+  disponible: boolean;
   categorias: Categoria[];
   ingredientes: IngredienteEnProducto[];
 }
@@ -104,7 +106,11 @@ export interface ProductoCreate {
 }
 
 export interface ProductoUpdate {
-  nombre: string;
+  nombre?: string;
   descripcion?: string;
-  precio: number;
+  precio?: number;
+  stock_cantidad?: number;
+  disponible?: boolean;
+  categoria_ids?: number[];
+  ingredientes?: IngredienteProductoInput[];
 }

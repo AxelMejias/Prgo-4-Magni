@@ -123,6 +123,48 @@ export const categoriasApi = {
   delete: (id: number) => del(`/api/v1/categorias/${id}`),
 };
 
+// ─── Admin: Usuarios ──────────────────────────────────────────────────────────
+export type UsuarioAdmin = {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  celular?: string | null;
+  roles: { codigo: string; nombre: string }[];
+  created_at: string;
+  deleted_at?: string | null;
+};
+
+export type PaginatedUsuariosAdmin = {
+  items: UsuarioAdmin[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+};
+
+function delJson<T>(url: string): Promise<T> {
+  return fetch(`${BASE}${url}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+    credentials: "include",
+  }).then((r) => handleResponse<T>(r));
+}
+
+export const adminApi = {
+  getUsuarios: (page = 1, size = 20, rol_codigo?: string) => {
+    const qs = new URLSearchParams({ page: String(page), size: String(size) });
+    if (rol_codigo) qs.set("rol_codigo", rol_codigo);
+    return get<PaginatedUsuariosAdmin>(`/api/v1/admin/usuarios?${qs}`);
+  },
+  asignarRol: (usuarioId: number, rolCodigo: string) =>
+    post<UsuarioAdmin>(`/api/v1/admin/usuarios/${usuarioId}/roles`, { rol_codigo: rolCodigo }),
+  removerRol: (usuarioId: number, rolCodigo: string) =>
+    delJson<UsuarioAdmin>(`/api/v1/admin/usuarios/${usuarioId}/roles/${rolCodigo}`),
+  deleteUsuario: (usuarioId: number) =>
+    del(`/api/v1/admin/usuarios/${usuarioId}`),
+};
+
 // ─── Ingredientes ─────────────────────────────────────────────────────────────
 export const ingredientesApi = {
   getAll: () =>
