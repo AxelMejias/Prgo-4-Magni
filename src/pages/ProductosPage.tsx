@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -70,6 +70,24 @@ export default function ProductosPage() {
     queryKey: ["ingredientes-select"],
     queryFn: ingredientesApi.getAll,
   });
+
+  const { data: editingDetail, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ["productos", "detail-edit", editingId],
+    queryFn: () => productosApi.getById(editingId!),
+    enabled: !!editingId,
+  });
+
+  useEffect(() => {
+    if (editingDetail && editingId) {
+      setSelectedCategorias(editingDetail.categorias.map((c) => c.id));
+      setSelectedIngredientes(
+        editingDetail.ingredientes.map((i) => ({
+          ingrediente_id: i.id,
+          cantidad: String(i.cantidad),
+        }))
+      );
+    }
+  }, [editingDetail, editingId]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useMutation({
@@ -150,17 +168,27 @@ export default function ProductosPage() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    const ingredientesValidos = selectedIngredientes
+      .filter((i) => i.ingrediente_id > 0 && Number(i.cantidad) > 0)
+      .map((i) => ({ ingrediente_id: i.ingrediente_id, cantidad: Number(i.cantidad) }));
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data: { nombre, descripcion: descripcion || undefined, precio: Number(precio) } });
+      updateMutation.mutate({
+        id: editingId,
+        data: {
+          nombre,
+          descripcion: descripcion || undefined,
+          precio: Number(precio),
+          categoria_ids: selectedCategorias,
+          ingredientes: ingredientesValidos,
+        },
+      });
     } else {
       createMutation.mutate({
         nombre,
         descripcion: descripcion || undefined,
         precio: Number(precio),
         categoria_ids: selectedCategorias,
-        ingredientes: selectedIngredientes
-          .filter((i) => i.ingrediente_id > 0 && Number(i.cantidad) > 0)
-          .map((i) => ({ ingrediente_id: i.ingrediente_id, cantidad: Number(i.cantidad) })),
+        ingredientes: ingredientesValidos,
       });
     }
   }
@@ -192,11 +220,9 @@ export default function ProductosPage() {
   }
 
   function updateIngredienteCantidad(index: number, value: string) {
-    if (value === "" || /^\d*\.?\d*$/.test(value)) {
-      setSelectedIngredientes((prev) =>
-        prev.map((item, i) => (i === index ? { ...item, cantidad: value } : item))
-      );
-    }
+    setSelectedIngredientes((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, cantidad: value } : item))
+    );
   }
 
   function toggleCategoria(id: number) {
@@ -205,7 +231,7 @@ export default function ProductosPage() {
     );
   }
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isSaving = createMutation.isPending || updateMutation.isPending || (!!editingId && isLoadingDetail);
   const currentData = tab === "activos" ? productosData : inactivosData;
   const currentLoading = tab === "activos" ? isLoading : isLoadingInactivos;
   const currentError = tab === "activos" ? isError : isErrorInactivos;
@@ -501,14 +527,14 @@ export default function ProductosPage() {
             </div>
           </div>
 
-          {/* Categorías (solo creación) */}
-          {!editingId && categorias && categorias.length > 0 && (
+          {/* Categorías */}
+          {categorias && categorias.length > 0 && (
             <div>
               <label className="block text-sm font-semibold text-surface-700 mb-2">
                 Categorías
               </label>
               <div className="flex flex-wrap gap-2">
-                {categorias.map((cat) => (
+                {categorias.filter((cat) => cat.parent_id != null).map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
@@ -527,8 +553,8 @@ export default function ProductosPage() {
             </div>
           )}
 
-          {/* Ingredientes (solo creación) */}
-          {!editingId && (
+          {/* Ingredientes */}
+          {(
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-surface-700">Ingredientes</label>
@@ -557,15 +583,18 @@ export default function ProductosPage() {
                       className="flex-1 border border-surface-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition bg-white"
                     >
                       <option value={0}>{ingredientes ? "Seleccionar..." : "Cargando..."}</option>
-                      {ingredientes?.map((ing) => (
+                      {ingredientes?.filter((ing) =>
+                        !selectedIngredientes.some((s, i) => i !== index && s.ingrediente_id === ing.id)
+                      ).map((ing) => (
                         <option key={ing.id} value={ing.id}>
                           {ing.nombre} ({ing.unidad_medida})
                         </option>
                       ))}
                     </select>
                     <input
-                      type="text"
-                      inputMode="decimal"
+                      type="number"
+                      min="1"
+                      step="1"
                       placeholder="Cant."
                       value={item.cantidad}
                       onChange={(e) => updateIngredienteCantidad(index, e.target.value)}
@@ -584,10 +613,8 @@ export default function ProductosPage() {
             </div>
           )}
 
-          {editingId && (
-            <div className="bg-warning-50 border border-warning-100 text-warning-600 text-xs px-4 py-3 rounded-xl flex items-center gap-2">
-              <span>ℹ️</span> La edición solo actualiza nombre, descripción y precio.
-            </div>
+          {editingId && isLoadingDetail && (
+            <div className="text-center py-2 text-xs text-surface-400">Cargando datos actuales...</div>
           )}
 
           <div className="flex justify-end gap-3 pt-3 border-t border-surface-100">
