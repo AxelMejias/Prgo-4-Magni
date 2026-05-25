@@ -102,6 +102,7 @@ Accesible para usuarios con rol `CLIENT`.
 | `/productos/:id` | ADMIN, STOCK | Detalle y edición de producto |
 | `/admin/pedidos` | ADMIN, PEDIDOS | Panel de pedidos: avanzar estados del FSM |
 | `/admin/pedidos/:id` | ADMIN, PEDIDOS | Detalle y transición de estado del pedido |
+| `/admin/usuarios` | ADMIN | Gestión de usuarios: lista, asignación/remoción de roles, baja lógica |
 
 **Pantalla de Pedidos (Caja/Empleado):**
 - Rol `ADMIN`: puede hacer todas las transiciones del FSM y cancelar desde cualquier estado
@@ -228,6 +229,7 @@ src/
 │   ├── MisDireccionesPage.tsx   # CRUD de direcciones de entrega
 │   ├── PedidoDetallePage.tsx    # Detalle + transiciones FSM
 │   ├── AdminPedidosPage.tsx     # Panel staff: gestión de pedidos
+│   ├── AdminUsuariosPage.tsx    # Panel ADMIN: gestión de usuarios y roles
 │   ├── CategoriasPage.tsx
 │   ├── IngredientesPage.tsx
 │   ├── ProductosPage.tsx
@@ -320,5 +322,75 @@ npm run test
 | Rol | Email | Contraseña |
 |---|---|---|
 | Administrador | admin@foodstore.com | Admin1234! |
+| Gestor de Pedidos (Cocina) | cocina@foodstore.com | Cocina1234! |
+| Gestor de Stock | stock@foodstore.com | Stock1234! |
 
 > Los usuarios que se registran reciben el rol `CLIENT` automáticamente.
+> Las cuentas de staff se crean automáticamente con el seed del backend.
+
+---
+
+## Changelog
+
+### 24/05/2026 — Parcial 2
+
+---
+
+#### Nueva página: Gestión de Usuarios (`/admin/usuarios`)
+
+Página exclusiva para el rol `ADMIN`. Implementa el panel de administración de usuarios que el backend ya tenía completo pero no tenía interfaz.
+
+- Tabla paginada de usuarios con avatar de iniciales, nombre, email, roles como badges de colores y fecha de registro
+- Filtro por rol: tabs "Todos / Admin / Pedidos / Stock / Clientes"
+- Modal de gestión al hacer clic en "Gestionar →":
+  - Información del usuario (ID, email, celular, fecha de registro)
+  - Roles actuales con botón "×" para quitar cada uno en tiempo real
+  - Selector de "Asignar rol" que solo muestra los roles que el usuario aún no tiene
+  - Zona de peligro: baja lógica con confirmación en dos pasos
+- Usuarios dados de baja se muestran con opacidad reducida y etiqueta "· Baja"
+- Archivos nuevos: `pages/AdminUsuariosPage.tsx`
+- Archivos modificados: `App.tsx` (ruta `/admin/usuarios`), `Layout.tsx` (nav item + breadcrumb), `services/api.ts` (adminApi + tipos)
+
+---
+
+#### Módulo Tienda — `HomeStorePage`
+
+| Cambio | Descripción |
+|---|---|
+| Búsqueda en tiempo real | Debounce de 400 ms — el catálogo se filtra mientras se escribe, sin necesidad de presionar "Buscar" |
+| Modal de detalle de producto | Clic en cualquier card abre un modal con descripción completa, categorías (pills), lista de ingredientes con cantidades y botón "Agregar al carrito" |
+| Stock visible en cards | Cada card muestra las unidades disponibles: texto gris normal, naranja con `¡Solo X!` cuando quedan ≤3, rojo "Sin stock" y botón deshabilitado cuando es 0 |
+| Toast notification | Al agregar un producto (desde card o modal), aparece un toast en la esquina inferior derecha con el nombre del producto — desaparece automáticamente |
+| Paginación estable | Grid con `min-h` fijo — la barra de paginación ya no salta de posición entre páginas con distinta cantidad de productos |
+| Estilos de paginación | Botón activo con color brand, botón deshabilitado en gris claro |
+
+---
+
+#### Módulo Checkout — `CheckoutPage`
+
+| Cambio | Descripción |
+|---|---|
+| Selector de tipo de entrega | Nueva sección con dos opciones: "Retiro en local" (sin costo adicional) y "Envío a domicilio" (+$50) |
+| Dirección condicional | La sección de selección de dirección solo aparece cuando se elige "Envío a domicilio" |
+| Costo de envío correcto | El resumen lateral muestra "$0 — Gratis" para retiro y "+$50" para domicilio, reflejando el mismo comportamiento del backend |
+| Orden de formas de pago | Transferencia bancaria aparece primero, Efectivo segundo (ordenados por código) |
+
+---
+
+#### Módulo Productos — `ProductoDetallePage`
+
+| Cambio | Descripción |
+|---|---|
+| Panel de Stock | Nueva sección "Stock y Disponibilidad" visible para ADMIN y STOCK: input numérico para unidades + toggle Activo/Inactivo + botón "Guardar cambios" con feedback "✓ Guardado" |
+| Badges en header | El encabezado del producto ahora muestra el estado (Activo/Inactivo) con color dinámico y el stock actual (`Stock: X u.`) |
+
+---
+
+#### Infraestructura y tipos
+
+| Archivo | Cambio |
+|---|---|
+| `services/api.ts` | Agregados tipos `UsuarioAdmin`, `PaginatedUsuariosAdmin`; helper `delJson<T>` para DELETE con body JSON; objeto `adminApi` con `getUsuarios`, `asignarRol`, `removerRol`, `deleteUsuario` |
+| `types/index.ts` | Agregados `stock_cantidad: number` y `disponible: boolean` a `ProductoDetalle`; `stock_cantidad?: number` y `disponible?: boolean` a `ProductoUpdate` |
+| `App.tsx` | Ruta `/admin/usuarios` bajo `ProtectedRoute allowedRoles={["ADMIN"]}` |
+| `Layout.tsx` | Ítem "👥 Usuarios" en sidebar (solo ADMIN); entrada `usuarios` en `breadcrumbMap` |
