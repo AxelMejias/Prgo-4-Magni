@@ -8,10 +8,38 @@ import type {
   ImportarResult,
 } from "./model";
 
+const fieldLabels: Record<string, string> = {
+  nombre: "Nombre",
+  unidad_medida: "Unidad de medida",
+  descripcion: "Descripción",
+  es_alergeno: "Es alérgeno",
+};
+
+function parsePydanticMsg(msg: string): string {
+  if (/at least \d+ character/.test(msg)) {
+    const n = msg.match(/(\d+) character/)?.[1] ?? "2";
+    return `Debe tener al menos ${n} caracteres`;
+  }
+  if (/greater than 0/.test(msg)) return "Debe ser mayor a 0";
+  if (/greater than or equal to 0/.test(msg)) return "Debe ser mayor o igual a 0";
+  if (/field required/i.test(msg)) return "Campo requerido";
+  return msg;
+}
+
 function extractMsg(error: unknown): Error {
   if (typeof error === "object" && error !== null && "response" in error) {
     const axiosErr = error as { response?: { data?: { detail?: unknown } } };
     const detail = axiosErr.response?.data?.detail;
+    if (Array.isArray(detail)) {
+      const msg = detail
+        .map((d: { loc: string[]; msg: string }) => {
+          const field = d.loc?.[d.loc.length - 1];
+          const label = field && field !== "body" ? (fieldLabels[field] ?? field) : null;
+          return label ? `${label}: ${parsePydanticMsg(d.msg)}` : parsePydanticMsg(d.msg);
+        })
+        .join("\n");
+      return new Error(msg);
+    }
     if (typeof detail === "string") return new Error(detail);
     if (typeof detail === "object" && detail !== null && "detail" in detail) {
       return new Error(String((detail as Record<string, unknown>).detail));
