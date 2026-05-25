@@ -9,17 +9,19 @@ import type { PedidoCreate } from "../entities/pedido/model";
 
 const COSTO_ENVIO = 50;
 
+type TipoEntrega = "retiro" | "domicilio";
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clear);
 
+  const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>("retiro");
   const [direccionId, setDireccionId] = useState<number | "">("");
   const [formaPago, setFormaPago] = useState("");
   const [notas, setNotas] = useState("");
   const [formError, setFormError] = useState("");
 
-  // Catálogos del backend
   const { data: formasPago, isLoading: loadingPago } = useQuery({
     queryKey: ["formas-pago"],
     queryFn: pedidoApi.getFormasPago,
@@ -31,9 +33,9 @@ export default function CheckoutPage() {
   });
   const direcciones: Direccion[] = direccionesData?.items ?? [];
 
-  // Totales
   const subtotal = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0);
-  const total = subtotal + COSTO_ENVIO;
+  const costo_envio = tipoEntrega === "domicilio" ? COSTO_ENVIO : 0;
+  const total = subtotal + costo_envio;
 
   const crearPedidoMutation = useMutation({
     mutationFn: (payload: PedidoCreate) => pedidoApi.create(payload),
@@ -43,6 +45,11 @@ export default function CheckoutPage() {
     },
     onError: (err: Error) => setFormError(err.message),
   });
+
+  function handleTipoEntrega(tipo: TipoEntrega) {
+    setTipoEntrega(tipo);
+    setDireccionId("");
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,10 +63,14 @@ export default function CheckoutPage() {
       setFormError("Seleccioná una forma de pago.");
       return;
     }
+    if (tipoEntrega === "domicilio" && direccionId === "") {
+      setFormError("Seleccioná una dirección de entrega.");
+      return;
+    }
 
     const payload: PedidoCreate = {
       forma_pago_codigo: formaPago,
-      direccion_id: direccionId !== "" ? Number(direccionId) : null,
+      direccion_id: tipoEntrega === "domicilio" && direccionId !== "" ? Number(direccionId) : null,
       notas: notas.trim() || null,
       items: items.map((i) => ({
         producto_id: i.producto_id,
@@ -99,70 +110,107 @@ export default function CheckoutPage() {
         {/* ─── Formulario ──────────────────────────────────────────── */}
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* Dirección de entrega */}
+          {/* Tipo de entrega */}
           <section className="bg-white rounded-2xl border border-surface-200 p-5">
-            <h2 className="font-bold text-surface-900 mb-4">📍 Dirección de entrega</h2>
+            <h2 className="font-bold text-surface-900 mb-4">🚚 Tipo de entrega</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <label
+                className={`flex flex-col items-center gap-2 cursor-pointer p-4 rounded-xl border-2 transition-all ${
+                  tipoEntrega === "retiro"
+                    ? "border-brand-500 bg-brand-50"
+                    : "border-surface-200 hover:border-brand-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="tipo_entrega"
+                  className="sr-only"
+                  checked={tipoEntrega === "retiro"}
+                  onChange={() => handleTipoEntrega("retiro")}
+                />
+                <span className="text-2xl">🏪</span>
+                <span className="text-sm font-semibold text-surface-800">Retiro en local</span>
+                <span className="text-xs text-success-600 font-bold">Sin costo adicional</span>
+              </label>
 
-            {direcciones.length === 0 ? (
-              <p className="text-sm text-surface-500">
-                No tenés direcciones guardadas.{" "}
-                <button
-                  type="button"
-                  onClick={() => navigate("/mis-direcciones")}
-                  className="text-brand-600 hover:underline"
-                >
-                  Agregar una
-                </button>{" "}
-                o elegí retiro en local.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-surface-200 hover:border-brand-300 transition-colors">
-                  <input
-                    type="radio"
-                    name="direccion"
-                    value=""
-                    checked={direccionId === ""}
-                    onChange={() => setDireccionId("")}
-                    className="accent-brand-600"
-                  />
-                  <span className="text-sm text-surface-700">
-                    🏪 Retiro en local (sin dirección)
-                  </span>
-                </label>
-
-                {direcciones.map((dir) => (
-                  <label
-                    key={dir.id}
-                    className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-surface-200 hover:border-brand-300 transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="direccion"
-                      value={dir.id}
-                      checked={direccionId === dir.id}
-                      onChange={() => setDireccionId(dir.id)}
-                      className="accent-brand-600"
-                    />
-                    <div className="text-sm">
-                      {dir.alias && (
-                        <p className="font-semibold text-brand-700">{dir.alias}</p>
-                      )}
-                      <p className="text-surface-700">{dir.linea1}</p>
-                      <p className="text-surface-500 text-xs">
-                        {dir.ciudad}{dir.provincia ? `, ${dir.provincia}` : ""}
-                      </p>
-                    </div>
-                    {dir.es_principal && (
-                      <span className="ml-auto text-[10px] bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded-full">
-                        Principal
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            )}
+              <label
+                className={`flex flex-col items-center gap-2 cursor-pointer p-4 rounded-xl border-2 transition-all ${
+                  tipoEntrega === "domicilio"
+                    ? "border-brand-500 bg-brand-50"
+                    : "border-surface-200 hover:border-brand-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="tipo_entrega"
+                  className="sr-only"
+                  checked={tipoEntrega === "domicilio"}
+                  onChange={() => handleTipoEntrega("domicilio")}
+                />
+                <span className="text-2xl">🏠</span>
+                <span className="text-sm font-semibold text-surface-800">Envío a domicilio</span>
+                <span className="text-xs text-surface-500 font-bold">+{formatARS(COSTO_ENVIO)}</span>
+              </label>
+            </div>
           </section>
+
+          {/* Dirección (solo si eligió domicilio) */}
+          {tipoEntrega === "domicilio" && (
+            <section className="bg-white rounded-2xl border border-surface-200 p-5">
+              <h2 className="font-bold text-surface-900 mb-4">📍 Dirección de entrega</h2>
+
+              {direcciones.length === 0 ? (
+                <div className="text-center py-4 space-y-3">
+                  <p className="text-sm text-surface-500">
+                    No tenés direcciones guardadas.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/mis-direcciones")}
+                    className="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors"
+                  >
+                    Agregar dirección
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {direcciones.map((dir) => (
+                    <label
+                      key={dir.id}
+                      className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-colors ${
+                        direccionId === dir.id
+                          ? "border-brand-400 bg-brand-50"
+                          : "border-surface-200 hover:border-brand-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="direccion"
+                        value={dir.id}
+                        checked={direccionId === dir.id}
+                        onChange={() => setDireccionId(dir.id)}
+                        className="accent-brand-600"
+                      />
+                      <div className="text-sm flex-1">
+                        {dir.alias && (
+                          <p className="font-semibold text-brand-700">{dir.alias}</p>
+                        )}
+                        <p className="text-surface-700">{dir.linea1}</p>
+                        <p className="text-surface-500 text-xs">
+                          {dir.ciudad}{dir.provincia ? `, ${dir.provincia}` : ""}
+                        </p>
+                      </div>
+                      {dir.es_principal && (
+                        <span className="text-[10px] bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded-full">
+                          Principal
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Forma de pago */}
           <section className="bg-white rounded-2xl border border-surface-200 p-5">
@@ -174,10 +222,18 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 {formasPago
                   ?.filter((fp) => fp.habilitado)
+                  .sort((a, b) => {
+                    const orden: Record<string, number> = { TRANSFERENCIA: 0, EFECTIVO: 1 };
+                    return (orden[a.codigo] ?? 99) - (orden[b.codigo] ?? 99);
+                  })
                   .map((fp) => (
                     <label
                       key={fp.codigo}
-                      className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-surface-200 hover:border-brand-300 transition-colors"
+                      className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-colors ${
+                        formaPago === fp.codigo
+                          ? "border-brand-400 bg-brand-50"
+                          : "border-surface-200 hover:border-brand-300"
+                      }`}
                     >
                       <input
                         type="radio"
@@ -254,7 +310,9 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between text-surface-600">
                 <span>Envío</span>
-                <span>{formatARS(COSTO_ENVIO)}</span>
+                <span className={costo_envio === 0 ? "text-success-600 font-semibold" : ""}>
+                  {costo_envio === 0 ? "Gratis" : formatARS(costo_envio)}
+                </span>
               </div>
               <div className="flex justify-between font-bold text-surface-900 pt-2 border-t border-surface-100">
                 <span>Total</span>
