@@ -1,10 +1,16 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productosApi } from "../services/api";
 
 export default function ProductoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  const [stockInput, setStockInput] = useState<number | "">("");
+  const [disponibleInput, setDisponibleInput] = useState<boolean>(true);
+  const [stockSaved, setStockSaved] = useState(false);
 
   const {
     data: producto,
@@ -14,6 +20,23 @@ export default function ProductoDetallePage() {
     queryKey: ["productos", id],
     queryFn: () => productosApi.getById(Number(id)),
     enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (producto) {
+      setStockInput(producto.stock_cantidad);
+      setDisponibleInput(producto.disponible);
+    }
+  }, [producto]);
+
+  const stockMutation = useMutation({
+    mutationFn: (payload: { stock_cantidad: number; disponible: boolean }) =>
+      productosApi.update(Number(id), payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["productos", id] });
+      setStockSaved(true);
+      setTimeout(() => setStockSaved(false), 2500);
+    },
   });
 
   if (isLoading) {
@@ -70,8 +93,13 @@ export default function ProductoDetallePage() {
                 <span className="inline-flex items-center bg-surface-100 text-surface-500 px-3 py-1 rounded-lg text-xs font-bold">
                   ID: {producto.id}
                 </span>
-                <span className="inline-flex items-center bg-success-50 text-success-700 px-3 py-1 rounded-lg text-xs font-bold">
-                  Activo
+                <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold ${
+                  producto.disponible ? "bg-success-50 text-success-700" : "bg-surface-100 text-surface-500"
+                }`}>
+                  {producto.disponible ? "Activo" : "Inactivo"}
+                </span>
+                <span className="inline-flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">
+                  Stock: {producto.stock_cantidad} u.
                 </span>
               </div>
             </div>
@@ -81,6 +109,70 @@ export default function ProductoDetallePage() {
             <span className="text-3xl font-bold text-success-600">
               ${producto.precio.toLocaleString("es-AR")}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stock & Disponibilidad */}
+      <div className="bg-white rounded-xl border border-surface-200 p-6 mb-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-sm">
+            📦
+          </div>
+          <div>
+            <h2 className="font-bold text-surface-800 text-sm">Stock y Disponibilidad</h2>
+            <p className="text-xs text-surface-400">Editá las unidades disponibles y el estado del producto</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-surface-500 mb-1.5 uppercase tracking-wider">
+              Stock disponible
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={stockInput}
+              onChange={(e) => setStockInput(e.target.value === "" ? "" : Number(e.target.value))}
+              className="w-32 border border-surface-300 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-surface-500 mb-1.5 uppercase tracking-wider">
+              Disponible en tienda
+            </label>
+            <button
+              type="button"
+              onClick={() => setDisponibleInput((v) => !v)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                disponibleInput
+                  ? "border-success-400 bg-success-50 text-success-700"
+                  : "border-surface-300 bg-surface-100 text-surface-500"
+              }`}
+            >
+              <span className={`w-3 h-3 rounded-full ${disponibleInput ? "bg-success-500" : "bg-surface-400"}`} />
+              {disponibleInput ? "Activo" : "Inactivo"}
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() =>
+                stockMutation.mutate({
+                  stock_cantidad: Number(stockInput) || 0,
+                  disponible: disponibleInput,
+                })
+              }
+              disabled={stockMutation.isPending}
+              className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-50 transition-colors"
+            >
+              {stockMutation.isPending ? "Guardando…" : "Guardar cambios"}
+            </button>
+            {stockSaved && (
+              <span className="text-sm text-success-600 font-semibold">✓ Guardado</span>
+            )}
+            {stockMutation.isError && (
+              <span className="text-sm text-danger-600">Error al guardar</span>
+            )}
           </div>
         </div>
       </div>
