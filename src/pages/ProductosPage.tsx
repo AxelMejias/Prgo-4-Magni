@@ -433,22 +433,26 @@ export default function ProductosPage() {
               >
                 ← Anterior
               </button>
-              {Array.from({ length: Math.min(currentData.pages, 5) }, (_, i) => {
-                const p = i + 1;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setCurrentPage(p)}
-                    className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
-                      p === currentPage
-                        ? "bg-brand-500 text-white shadow-sm"
-                        : "border border-surface-200 hover:bg-surface-100 text-surface-600"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
+              {(() => {
+                const startPage = Math.max(1, Math.min(currentPage - 2, currentData.pages - 4));
+                const endPage = Math.min(currentData.pages, startPage + 4);
+                return Array.from({ length: endPage - startPage + 1 }, (_, i) => {
+                  const p = startPage + i;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                        p === currentPage
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "border border-surface-200 hover:bg-surface-100 text-surface-600"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                });
+              })()}
               <button
                 onClick={() => setCurrentPage((p) => p + 1)}
                 disabled={currentPage >= (currentData.pages || 1)}

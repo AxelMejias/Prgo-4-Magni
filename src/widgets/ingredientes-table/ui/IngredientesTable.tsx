@@ -134,22 +134,26 @@ export default function IngredientesTable({
           >
             ← Anterior
           </button>
-          {Array.from({ length: Math.min(pages, 5) }, (_, i) => {
-            const p = i + 1;
-            return (
-              <button
-                key={p}
-                onClick={() => onPageChange(p)}
-                className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
-                  p === page
-                    ? "bg-brand-500 text-white shadow-sm"
-                    : "border border-surface-200 hover:bg-surface-100 text-surface-600"
-                }`}
-              >
-                {p}
-              </button>
-            );
-          })}
+          {(() => {
+            const startPage = Math.max(1, Math.min(page - 2, pages - 4));
+            const endPage = Math.min(pages, startPage + 4);
+            return Array.from({ length: endPage - startPage + 1 }, (_, i) => {
+              const p = startPage + i;
+              return (
+                <button
+                  key={p}
+                  onClick={() => onPageChange(p)}
+                  className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                    p === page
+                      ? "bg-brand-500 text-white shadow-sm"
+                      : "border border-surface-200 hover:bg-surface-100 text-surface-600"
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            });
+          })()}
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page >= pages}

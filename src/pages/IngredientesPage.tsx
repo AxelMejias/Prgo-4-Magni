@@ -402,22 +402,26 @@ export default function IngredientesPage() {
                   >
                     ← Anterior
                   </button>
-                  {Array.from({ length: Math.min(inactivosData.pages, 5) }, (_, idx) => {
-                    const p = idx + 1;
-                    return (
-                      <button
-                        key={p}
-                        onClick={() => setPage(p)}
-                        className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
-                          p === pageParam
-                            ? "bg-danger-500 text-white shadow-sm"
-                            : "border border-surface-200 hover:bg-surface-100 text-surface-600"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
+                  {(() => {
+                    const startPage = Math.max(1, Math.min(pageParam - 2, inactivosData.pages - 4));
+                    const endPage = Math.min(inactivosData.pages, startPage + 4);
+                    return Array.from({ length: endPage - startPage + 1 }, (_, idx) => {
+                      const p = startPage + idx;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                            p === pageParam
+                              ? "bg-danger-500 text-white shadow-sm"
+                              : "border border-surface-200 hover:bg-surface-100 text-surface-600"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    });
+                  })()}
                   <button
                     onClick={() => setPage(pageParam + 1)}
                     disabled={pageParam >= (inactivosData.pages || 1)}
