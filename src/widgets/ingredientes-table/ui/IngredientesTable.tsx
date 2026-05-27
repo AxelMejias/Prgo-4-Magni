@@ -8,6 +8,10 @@ interface IngredientesTableProps {
   isDeleting: boolean;
 }
 
+function formatARS(n: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 }).format(n);
+}
+
 export default function IngredientesTable({
   data,
   onEdit,
@@ -22,19 +26,20 @@ export default function IngredientesTable({
       <table className="w-full">
         <thead>
           <tr className="bg-surface-50 border-b border-surface-200">
-            <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">ID</th>
-            <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Nombre</th>
-            <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Descripción</th>
-            <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Unidad</th>
-            <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Alérgeno</th>
-            <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Estado</th>
-            <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
+            <th className="text-left px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">ID</th>
+            <th className="text-left px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Nombre</th>
+            <th className="text-left px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Unidad</th>
+            <th className="text-right px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Costo unit.</th>
+            <th className="text-right px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Stock</th>
+            <th className="text-right px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Mínimo</th>
+            <th className="text-center px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Flags</th>
+            <th className="text-center px-4 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={7} className="text-center py-16 text-surface-400">
+              <td colSpan={8} className="text-center py-16 text-surface-400">
                 <p className="text-3xl mb-2">🧂</p>
                 <p className="font-medium">No se encontraron ingredientes</p>
                 <p className="text-xs mt-1">Probá con otros filtros o creá uno nuevo</p>
@@ -43,6 +48,8 @@ export default function IngredientesTable({
           )}
           {items.map((ing, i) => {
             const isDeleted = !!ing.deleted_at;
+            const stockBajo = !isDeleted && Number(ing.stock_cantidad) <= Number(ing.stock_minimo) && Number(ing.stock_minimo) > 0;
+
             return (
               <tr
                 key={ing.id}
@@ -54,47 +61,73 @@ export default function IngredientesTable({
                     : "bg-surface-50/30 hover:bg-surface-50"
                 }`}
               >
-                <td className="px-6 py-4">
+                {/* ID */}
+                <td className="px-4 py-3.5">
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface-100 text-xs font-bold text-surface-500">
                     {ing.id}
                   </span>
                 </td>
-                <td className="px-6 py-4">
-                  <span className={`font-semibold text-sm ${isDeleted ? "line-through text-surface-400" : "text-surface-800"}`}>
+
+                {/* Nombre */}
+                <td className="px-4 py-3.5">
+                  <p className={`font-semibold text-sm ${isDeleted ? "line-through text-surface-400" : "text-surface-800"}`}>
                     {ing.nombre}
-                  </span>
+                  </p>
+                  {ing.descripcion && (
+                    <p className="text-xs text-surface-400 truncate max-w-[160px]">{ing.descripcion}</p>
+                  )}
                 </td>
-                <td className="px-6 py-4 max-w-[180px]">
-                  <span className="text-xs text-surface-500 truncate block">
-                    {ing.descripcion || <em className="text-surface-300">—</em>}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1 rounded-lg text-xs font-bold">
+
+                {/* Unidad */}
+                <td className="px-4 py-3.5">
+                  <span className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg text-xs font-bold">
                     📏 {ing.unidad_medida}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-center">
-                  {ing.es_alergeno ? (
-                    <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-1 rounded-full text-xs font-bold">
-                      ⚠️ Alérgeno
-                    </span>
-                  ) : (
-                    <span className="text-surface-300 text-xs">—</span>
-                  )}
+
+                {/* Costo unitario */}
+                <td className="px-4 py-3.5 text-right">
+                  <span className="text-sm font-semibold text-surface-700">
+                    {formatARS(Number(ing.costo_unitario))}
+                  </span>
                 </td>
-                <td className="px-6 py-4 text-center">
-                  {isDeleted ? (
-                    <span className="inline-flex items-center gap-1 bg-red-50 text-red-500 border border-red-100 px-2.5 py-1 rounded-full text-xs font-bold">
-                      🗑 Eliminado
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 bg-green-50 text-green-600 border border-green-100 px-2.5 py-1 rounded-full text-xs font-bold">
-                      ✓ Activo
-                    </span>
-                  )}
+
+                {/* Stock actual */}
+                <td className="px-4 py-3.5 text-right">
+                  <span className={`text-sm font-bold ${stockBajo ? "text-danger-600" : "text-surface-700"}`}>
+                    {Number(ing.stock_cantidad).toLocaleString("es-AR")}
+                    {stockBajo && <span className="ml-1 text-[10px]">⚠️</span>}
+                  </span>
                 </td>
-                <td className="px-6 py-4">
+
+                {/* Stock mínimo */}
+                <td className="px-4 py-3.5 text-right">
+                  <span className="text-xs text-surface-400">
+                    {Number(ing.stock_minimo).toLocaleString("es-AR")}
+                  </span>
+                </td>
+
+                {/* Flags */}
+                <td className="px-4 py-3.5">
+                  <div className="flex flex-col gap-1 items-center">
+                    {ing.es_alergeno && (
+                      <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        ⚠️ Alérgeno
+                      </span>
+                    )}
+                    {ing.es_producto_terminado && (
+                      <span className="inline-flex items-center gap-1 bg-brand-50 text-brand-600 border border-brand-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        📦 Terminado
+                      </span>
+                    )}
+                    {!ing.es_alergeno && !ing.es_producto_terminado && (
+                      <span className="text-surface-300 text-xs">—</span>
+                    )}
+                  </div>
+                </td>
+
+                {/* Acciones */}
+                <td className="px-4 py-3.5">
                   <div className="flex items-center justify-center gap-2">
                     {!isDeleted && (
                       <>
@@ -121,7 +154,7 @@ export default function IngredientesTable({
         </tbody>
       </table>
 
-      {/* Footer: info + paginación */}
+      {/* Footer paginación */}
       <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 flex items-center justify-between">
         <span className="text-xs text-surface-400">
           {total} resultado{total !== 1 && "s"} — página {page} de {pages || 1}

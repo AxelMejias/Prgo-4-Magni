@@ -17,7 +17,6 @@ export default function IngredientesPage() {
   const queryClient = useQueryClient();
   const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
 
-  // Estado en URL: ?tab=activos&page=2&nombre=harina&es_alergeno=true
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get("tab") as Tab) ?? "activos";
   const pageParam = parseInt(searchParams.get("page") ?? "1", 10);
@@ -25,11 +24,12 @@ export default function IngredientesPage() {
   const esAlergenoRaw = searchParams.get("es_alergeno");
   const esAlergeno: boolean | undefined =
     esAlergenoRaw === "true" ? true : esAlergenoRaw === "false" ? false : undefined;
+  const esProductoTerminadoRaw = searchParams.get("es_producto_terminado");
+  const esProductoTerminado: boolean | undefined =
+    esProductoTerminadoRaw === "true" ? true : esProductoTerminadoRaw === "false" ? false : undefined;
 
-  // Valor del input de búsqueda (local, solo para el controlled input)
   const [nombreInput, setNombreInput] = useState(nombreParam);
 
-  // Filtros derivados de la URL
   const filters: IngredienteFilters = {
     page: pageParam,
     size: PAGE_SIZE,
@@ -37,20 +37,25 @@ export default function IngredientesPage() {
     es_alergeno: esAlergeno,
   };
 
-  // Modal CRUD
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Ingrediente | null>(null);
   const [modalError, setModalError] = useState("");
 
-  // Export / Import
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportarResult | null>(null);
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["ingredientes", filters],
-    queryFn: () => ingredienteApi.getAll(filters),
+    queryKey: ["ingredientes", filters, esProductoTerminado],
+    queryFn: async () => {
+      const result = await ingredienteApi.getAll(filters);
+      if (esProductoTerminado === undefined) return result;
+      return {
+        ...result,
+        items: result.items.filter((i) => i.es_producto_terminado === esProductoTerminado),
+      };
+    },
     enabled: tab === "activos",
   });
 
@@ -169,6 +174,16 @@ export default function IngredientesPage() {
     });
   }
 
+  function handleEsProductoTerminadoChange(v: boolean | undefined) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("page", "1");
+      if (v === undefined) params.delete("es_producto_terminado");
+      else params.set("es_producto_terminado", String(v));
+      return params;
+    });
+  }
+
   function handleResetFilters() {
     setNombreInput("");
     setSearchParams({ tab: "activos", page: "1" });
@@ -269,8 +284,10 @@ export default function IngredientesPage() {
           <FilterBar
             nombre={nombreInput}
             esAlergeno={filters.es_alergeno}
+            esProductoTerminado={esProductoTerminado}
             onNombreChange={handleNombreChange}
             onEsAlergenoChange={handleEsAlergenoChange}
+            onEsProductoTerminadoChange={handleEsProductoTerminadoChange}
             onReset={handleResetFilters}
             onExport={handleExport}
             isExporting={isExporting}

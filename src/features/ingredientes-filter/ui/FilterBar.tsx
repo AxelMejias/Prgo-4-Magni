@@ -3,8 +3,10 @@ import { useRef } from "react";
 interface FilterBarProps {
   nombre: string;
   esAlergeno: boolean | undefined;
+  esProductoTerminado: boolean | undefined;
   onNombreChange: (v: string) => void;
   onEsAlergenoChange: (v: boolean | undefined) => void;
+  onEsProductoTerminadoChange: (v: boolean | undefined) => void;
   onReset: () => void;
   onExport: () => void;
   isExporting: boolean;
@@ -17,8 +19,10 @@ interface FilterBarProps {
 export default function FilterBar({
   nombre,
   esAlergeno,
+  esProductoTerminado,
   onNombreChange,
   onEsAlergenoChange,
+  onEsProductoTerminadoChange,
   onReset,
   onExport,
   isExporting,
@@ -28,7 +32,7 @@ export default function FilterBar({
   onDescargarPlantilla,
 }: FilterBarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasActiveFilters = nombre !== "" || esAlergeno !== undefined;
+  const hasActiveFilters = nombre !== "" || esAlergeno !== undefined || esProductoTerminado !== undefined;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -58,9 +62,23 @@ export default function FilterBar({
         }}
         className="border border-surface-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
       >
-        <option value="">Todos</option>
-        <option value="true">Solo alérgenos</option>
+        <option value="">Todos los alérgenos</option>
+        <option value="true">⚠️ Solo alérgenos</option>
         <option value="false">Sin alérgenos</option>
+      </select>
+
+      {/* Filtro producto terminado */}
+      <select
+        value={esProductoTerminado === undefined ? "" : esProductoTerminado ? "true" : "false"}
+        onChange={(e) => {
+          if (e.target.value === "") onEsProductoTerminadoChange(undefined);
+          else onEsProductoTerminadoChange(e.target.value === "true");
+        }}
+        className="border border-surface-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
+      >
+        <option value="">Todos los tipos</option>
+        <option value="true">📦 Producto terminado</option>
+        <option value="false">🧂 Materia prima</option>
       </select>
 
       {/* Badge filtros activos */}
@@ -79,7 +97,6 @@ export default function FilterBar({
       {/* Botones de admin */}
       {canManage && (
         <>
-          {/* Descargar plantilla */}
           <button
             onClick={onDescargarPlantilla}
             className="flex items-center gap-2 bg-surface-100 hover:bg-surface-200 text-surface-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-surface-300"
@@ -87,7 +104,6 @@ export default function FilterBar({
             📋 Plantilla
           </button>
 
-          {/* Importar Excel */}
           <input
             ref={fileInputRef}
             type="file"
@@ -105,7 +121,6 @@ export default function FilterBar({
         </>
       )}
 
-      {/* Exportar Excel */}
       <button
         onClick={onExport}
         disabled={isExporting}

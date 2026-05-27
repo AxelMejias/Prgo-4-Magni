@@ -158,38 +158,18 @@ export default function HomeStorePage() {
                     🍔
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-surface-900 line-clamp-1">
-                      {p.nombre}
-                    </h3>
+                    <h3 className="font-semibold text-surface-900 line-clamp-1">{p.nombre}</h3>
                     <p className="text-xs text-surface-500 line-clamp-2 mt-0.5">
                       {p.descripcion ?? "Sin descripción"}
                     </p>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-brand-700">
-                        {formatARS(p.precio)}
-                      </span>
-                      <p className={`text-xs mt-0.5 font-medium ${
-                        p.stock_cantidad === 0
-                          ? "text-danger-500"
-                          : p.stock_cantidad <= 3
-                          ? "text-warning-600"
-                          : "text-surface-400"
-                      }`}>
-                        {p.stock_cantidad === 0
-                          ? "Sin stock"
-                          : p.stock_cantidad <= 3
-                          ? `¡Solo ${p.stock_cantidad} disponible${p.stock_cantidad > 1 ? "s" : ""}!`
-                          : `${p.stock_cantidad} disponibles`}
-                      </p>
-                    </div>
+                    <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
                     <button
                       onClick={(e) => handleAdd(p, e)}
-                      disabled={p.stock_cantidad <= 0}
-                      className="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 disabled:bg-surface-300 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition-colors"
                     >
-                      {p.stock_cantidad > 0 ? "Agregar" : "Sin stock"}
+                      Agregar
                     </button>
                   </div>
                 </article>
@@ -203,11 +183,10 @@ export default function HomeStorePage() {
               <button
                 onClick={() => setPage(currentPage - 1)}
                 disabled={currentPage <= 1}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                  currentPage <= 1
-                    ? "border-surface-200 bg-surface-100 text-surface-300 cursor-not-allowed"
-                    : "border-brand-600 bg-brand-600 text-white hover:bg-brand-700 cursor-pointer"
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${currentPage <= 1
+                  ? "border-surface-200 bg-surface-100 text-surface-300 cursor-not-allowed"
+                  : "border-brand-600 bg-brand-600 text-white hover:bg-brand-700 cursor-pointer"
+                  }`}
               >
                 ←
               </button>
@@ -217,11 +196,10 @@ export default function HomeStorePage() {
               <button
                 onClick={() => setPage(currentPage + 1)}
                 disabled={currentPage >= data.pages}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                  currentPage >= data.pages
-                    ? "border-surface-200 bg-surface-100 text-surface-300 cursor-not-allowed"
-                    : "border-brand-600 bg-brand-600 text-white hover:bg-brand-700 cursor-pointer"
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${currentPage >= data.pages
+                  ? "border-surface-200 bg-surface-100 text-surface-300 cursor-not-allowed"
+                  : "border-brand-600 bg-brand-600 text-white hover:bg-brand-700 cursor-pointer"
+                  }`}
               >
                 →
               </button>
@@ -232,11 +210,10 @@ export default function HomeStorePage() {
 
       {/* ── Toast "agregado al carrito" ──────────────────────────────── */}
       <div
-        className={`fixed bottom-6 right-6 z-[60] flex items-center gap-3 bg-surface-900 text-white px-4 py-3 rounded-2xl shadow-2xl transition-all duration-300 ${
-          toastVisible
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-3 pointer-events-none"
-        }`}
+        className={`fixed bottom-6 right-6 z-[60] flex items-center gap-3 bg-surface-900 text-white px-4 py-3 rounded-2xl shadow-2xl transition-all duration-300 ${toastVisible
+          ? "opacity-100 translate-y-0"
+          : "opacity-0 translate-y-3 pointer-events-none"
+          }`}
       >
         <span className="text-xl">🛒</span>
         <div>
@@ -254,7 +231,7 @@ export default function HomeStorePage() {
           onClick={() => setDetailId(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-surface-200"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-surface-200"
             onClick={(e) => e.stopPropagation()}
           >
             {isLoadingDetail ? (
@@ -313,25 +290,22 @@ export default function HomeStorePage() {
                     </div>
                   )}
 
-                  {/* Ingredientes */}
-                  {detail.ingredientes.length > 0 && (
+                  {/* Insumos */}
+                  {detail.insumos.length > 0 && (
                     <div>
                       <p className="text-xs font-bold text-surface-400 uppercase tracking-wider mb-2">
                         Ingredientes
                       </p>
                       <div className="bg-surface-50 rounded-xl overflow-hidden border border-surface-100">
-                        {detail.ingredientes.map((ing, i) => (
+                        {detail.insumos.map((ins, i) => (
                           <div
-                            key={ing.id}
-                            className={`flex items-center justify-between px-4 py-2.5 border-b border-surface-100 last:border-0 ${
-                              i % 2 === 0 ? "bg-white" : "bg-surface-50"
-                            }`}
+                            key={ins.ingrediente_id}
+                            className={`flex items-center justify-between px-4 py-2.5 border-b border-surface-100 last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-surface-50"
+                              }`}
                           >
-                            <span className="text-sm text-surface-700">
-                              {ing.nombre}
-                            </span>
+                            <span className="text-sm text-surface-700">{ins.nombre}</span>
                             <span className="text-xs font-bold text-surface-500 bg-surface-100 px-2 py-0.5 rounded-md">
-                              {ing.cantidad} {ing.unidad_medida}
+                              {ins.cantidad} {ins.unidad_medida}
                             </span>
                           </div>
                         ))}

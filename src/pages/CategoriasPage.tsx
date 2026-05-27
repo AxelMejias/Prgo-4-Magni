@@ -16,15 +16,8 @@ interface CategoriaNodeProps {
   onAddChild: (parentId: number) => void;
 }
 
-function CategoriaNode({
-  nodo,
-  nivel,
-  canManage,
-  onEdit,
-  onDelete,
-  onAddChild,
-}: CategoriaNodeProps) {
-  const [collapsed, setCollapsed] = useState(false);
+function CategoriaNode({ nodo, nivel, canManage, onEdit, onDelete, onAddChild }: CategoriaNodeProps) {
+  const [collapsed, setCollapsed] = useState(true);
   const hasChildren = nodo.children.length > 0;
 
   const indentColor = [
@@ -38,13 +31,10 @@ function CategoriaNode({
     <li>
       <div
         className={`flex items-start justify-between rounded-xl px-4 py-3 ${
-          nivel === 0
-            ? "bg-white border border-surface-200 shadow-sm"
-            : "bg-surface-50"
+          nivel === 0 ? "bg-white border border-surface-200 shadow-sm" : "bg-surface-50"
         }`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Toggle colapsar si tiene hijos */}
           {hasChildren ? (
             <button
               onClick={() => setCollapsed(!collapsed)}
@@ -58,15 +48,13 @@ function CategoriaNode({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-surface-900 text-sm">
-                {nodo.nombre}
-              </span>
+              <span className="font-semibold text-surface-900 text-sm">{nodo.nombre}</span>
               {nivel === 0 && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-100 text-warning-600">
                   RAÍZ
                 </span>
               )}
-              {nodo.children.length > 0 && (
+              {hasChildren && (
                 <span className="text-[10px] text-surface-400">
                   ({nodo.children.length} subcategoría{nodo.children.length !== 1 ? "s" : ""})
                 </span>
@@ -102,11 +90,8 @@ function CategoriaNode({
         )}
       </div>
 
-      {/* Hijos recursivos */}
       {hasChildren && !collapsed && (
-        <ul
-          className={`mt-1 ml-6 pl-4 border-l-2 ${indentColor} space-y-1`}
-        >
+        <ul className={`mt-1 ml-6 pl-4 border-l-2 ${indentColor} space-y-1`}>
           {nodo.children.map((hijo) => (
             <CategoriaNode
               key={hijo.id}
@@ -124,6 +109,21 @@ function CategoriaNode({
   );
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function filtrarArbol(nodos: CategoriaTree[], texto: string): CategoriaTree[] {
+  if (!texto.trim()) return nodos;
+  const lower = texto.toLowerCase();
+  return nodos
+    .map((nodo) => {
+      const hijos = filtrarArbol(nodo.children, texto);
+      const coincide = nodo.nombre.toLowerCase().includes(lower);
+      if (coincide || hijos.length > 0) return { ...nodo, children: hijos };
+      return null;
+    })
+    .filter(Boolean) as CategoriaTree[];
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function CategoriasPage() {
@@ -132,20 +132,15 @@ export default function CategoriasPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Categoria | null>(null);
-  const [form, setForm] = useState<CategoriaInput>({
-    nombre: "",
-    descripcion: "",
-    parent_id: null,
-  });
+  const [form, setForm] = useState<CategoriaInput>({ nombre: "", descripcion: "", parent_id: null });
   const [error, setError] = useState("");
+  const [busqueda, setBusqueda] = useState("");
 
-  // Árbol recursivo desde el nuevo endpoint
   const { data: tree, isLoading, isError } = useQuery({
     queryKey: ["categorias-tree"],
     queryFn: categoriasApi.getTree,
   });
 
-  // Lista plana para el selector de padre en el modal
   const { data: listaPlana } = useQuery({
     queryKey: ["categorias"],
     queryFn: categoriasApi.getAll,
@@ -184,11 +179,7 @@ export default function CategoriasPage() {
 
   function openEdit(c: Categoria) {
     setEditing(c);
-    setForm({
-      nombre: c.nombre,
-      descripcion: c.descripcion ?? "",
-      parent_id: c.parent_id ?? null,
-    });
+    setForm({ nombre: c.nombre, descripcion: c.descripcion ?? "", parent_id: c.parent_id ?? null });
     setError("");
     setModalOpen(true);
   }
@@ -228,14 +219,15 @@ export default function CategoriasPage() {
     }
   }
 
+  const arbolFiltrado = tree ? filtrarArbol(tree, busqueda) : [];
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900">Categorías</h1>
-          <p className="text-sm text-surface-500">
-            Árbol de categorías con profundidad ilimitada.
-          </p>
+          <p className="text-sm text-surface-500">Árbol de categorías con profundidad ilimitada.</p>
         </div>
         {canManage && (
           <button
@@ -247,17 +239,37 @@ export default function CategoriasPage() {
         )}
       </header>
 
+      {/* Buscador */}
+      <div className="relative w-full max-w-sm">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm">🔍</span>
+        <input
+          type="text"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar categoría..."
+          className="w-full pl-9 pr-9 py-2 border border-surface-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+        />
+        {busqueda && (
+          <button
+            onClick={() => setBusqueda("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 text-sm"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
       {isLoading && <p className="text-surface-500">Cargando…</p>}
       {isError && <p className="text-danger-600">Error al cargar categorías.</p>}
 
       {tree && (
         <ul className="space-y-3">
-          {tree.length === 0 && (
+          {arbolFiltrado.length === 0 && (
             <li className="text-center py-12 bg-white rounded-2xl border border-surface-200 text-surface-500">
-              No hay categorías cargadas.
+              {busqueda ? `Sin resultados para "${busqueda}"` : "No hay categorías cargadas."}
             </li>
           )}
-          {tree.map((nodo) => (
+          {arbolFiltrado.map((nodo) => (
             <CategoriaNode
               key={nodo.id}
               nodo={nodo}
@@ -272,16 +284,10 @@ export default function CategoriasPage() {
       )}
 
       {/* Modal CRUD */}
-      <Modal
-        open={modalOpen}
-        onClose={closeModal}
-        title={editing ? "Editar categoría" : "Nueva categoría"}
-      >
+      <Modal open={modalOpen} onClose={closeModal} title={editing ? "Editar categoría" : "Nueva categoría"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-surface-700 mb-1">
-              Nombre *
-            </label>
+            <label className="block text-xs font-semibold text-surface-700 mb-1">Nombre *</label>
             <input
               type="text"
               value={form.nombre}
@@ -291,9 +297,7 @@ export default function CategoriasPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-surface-700 mb-1">
-              Descripción
-            </label>
+            <label className="block text-xs font-semibold text-surface-700 mb-1">Descripción</label>
             <textarea
               value={form.descripcion ?? ""}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
@@ -317,9 +321,7 @@ export default function CategoriasPage() {
               {(listaPlana ?? [])
                 .filter((c) => !editing || c.id !== editing.id)
                 .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
             </select>
           </div>
