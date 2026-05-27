@@ -1,9 +1,130 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { categoriasApi } from "../services/api";
-import type { Categoria, CategoriaInput } from "../types";
+import type { Categoria, CategoriaInput, CategoriaTree } from "../types";
 import Modal from "../components/Modal";
 import { useAuthStore } from "../shared/store/authStore";
+
+// ── Componente recursivo ──────────────────────────────────────────────────────
+
+interface CategoriaNodeProps {
+  nodo: CategoriaTree;
+  nivel: number;
+  canManage: boolean;
+  onEdit: (c: Categoria) => void;
+  onDelete: (c: Categoria) => void;
+  onAddChild: (parentId: number) => void;
+}
+
+function CategoriaNode({
+  nodo,
+  nivel,
+  canManage,
+  onEdit,
+  onDelete,
+  onAddChild,
+}: CategoriaNodeProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const hasChildren = nodo.children.length > 0;
+
+  const indentColor = [
+    "border-warning-300",
+    "border-brand-300",
+    "border-success-300",
+    "border-purple-300",
+  ][nivel % 4];
+
+  return (
+    <li>
+      <div
+        className={`flex items-start justify-between rounded-xl px-4 py-3 ${
+          nivel === 0
+            ? "bg-white border border-surface-200 shadow-sm"
+            : "bg-surface-50"
+        }`}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Toggle colapsar si tiene hijos */}
+          {hasChildren ? (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="w-5 h-5 flex items-center justify-center text-surface-400 hover:text-surface-700 shrink-0"
+            >
+              {collapsed ? "▶" : "▼"}
+            </button>
+          ) : (
+            <span className="w-5 shrink-0" />
+          )}
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-surface-900 text-sm">
+                {nodo.nombre}
+              </span>
+              {nivel === 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-100 text-warning-600">
+                  RAÍZ
+                </span>
+              )}
+              {nodo.children.length > 0 && (
+                <span className="text-[10px] text-surface-400">
+                  ({nodo.children.length} subcategoría{nodo.children.length !== 1 ? "s" : ""})
+                </span>
+              )}
+            </div>
+            {nodo.descripcion && (
+              <p className="text-xs text-surface-500 mt-0.5">{nodo.descripcion}</p>
+            )}
+          </div>
+        </div>
+
+        {canManage && (
+          <div className="flex gap-2 shrink-0 ml-3">
+            <button
+              onClick={() => onAddChild(nodo.id)}
+              className="text-xs text-brand-600 font-semibold hover:underline"
+            >
+              + Sub
+            </button>
+            <button
+              onClick={() => onEdit({ id: nodo.id, nombre: nodo.nombre, descripcion: nodo.descripcion, parent_id: nodo.parent_id })}
+              className="text-xs text-surface-600 font-semibold hover:underline"
+            >
+              Editar
+            </button>
+            <button
+              onClick={() => onDelete({ id: nodo.id, nombre: nodo.nombre, descripcion: nodo.descripcion, parent_id: nodo.parent_id })}
+              className="text-xs text-danger-600 font-semibold hover:underline"
+            >
+              Eliminar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Hijos recursivos */}
+      {hasChildren && !collapsed && (
+        <ul
+          className={`mt-1 ml-6 pl-4 border-l-2 ${indentColor} space-y-1`}
+        >
+          {nodo.children.map((hijo) => (
+            <CategoriaNode
+              key={hijo.id}
+              nodo={hijo}
+              nivel={nivel + 1}
+              canManage={canManage}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onAddChild={onAddChild}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+// ── Página principal ──────────────────────────────────────────────────────────
 
 export default function CategoriasPage() {
   const queryClient = useQueryClient();
@@ -18,48 +139,39 @@ export default function CategoriasPage() {
   });
   const [error, setError] = useState("");
 
-  // ── useQuery: todas las categorías (size grande para armar el tree) ──
-  const { data: categorias, isLoading, isError } = useQuery({
+  // Árbol recursivo desde el nuevo endpoint
+  const { data: tree, isLoading, isError } = useQuery({
+    queryKey: ["categorias-tree"],
+    queryFn: categoriasApi.getTree,
+  });
+
+  // Lista plana para el selector de padre en el modal
+  const { data: listaPlana } = useQuery({
     queryKey: ["categorias"],
     queryFn: categoriasApi.getAll,
   });
 
-  // Diccionario id → categoria para mostrar el nombre del padre
-  const byId = useMemo(() => {
-    const map = new Map<number, Categoria>();
-    (categorias ?? []).forEach((c) => map.set(c.id, c));
-    return map;
-  }, [categorias]);
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["categorias-tree"] });
+    queryClient.invalidateQueries({ queryKey: ["categorias"] });
+  };
 
-  // Separar padres y subcategorías para el render jerárquico
-  const padres = (categorias ?? []).filter((c) => !c.parent_id);
-  const hijos = (parentId: number) =>
-    (categorias ?? []).filter((c) => c.parent_id === parentId);
-
-  // ── Mutations ────────────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: (payload: CategoriaInput) => categoriasApi.create(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categorias"] });
-      closeModal();
-    },
+    onSuccess: () => { invalidate(); closeModal(); },
     onError: (err: Error) => setError(err.message),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: CategoriaInput }) =>
       categoriasApi.update(id, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categorias"] });
-      closeModal();
-    },
+    onSuccess: () => { invalidate(); closeModal(); },
     onError: (err: Error) => setError(err.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => categoriasApi.delete(id),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["categorias"] }),
+    onSuccess: invalidate,
     onError: (err: Error) => alert(err.message),
   });
 
@@ -90,23 +202,19 @@ export default function CategoriasPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
     if (form.nombre.trim().length < 2) {
       setError("El nombre debe tener al menos 2 caracteres.");
       return;
     }
-    // Evitar elegirse a sí mismo como padre
     if (editing && form.parent_id === editing.id) {
       setError("Una categoría no puede ser su propio padre.");
       return;
     }
-
     const payload: CategoriaInput = {
       nombre: form.nombre.trim(),
       descripcion: form.descripcion?.trim() || undefined,
       parent_id: form.parent_id || null,
     };
-
     if (editing) {
       updateMutation.mutate({ id: editing.id, payload });
     } else {
@@ -126,7 +234,7 @@ export default function CategoriasPage() {
         <div>
           <h1 className="text-2xl font-bold text-surface-900">Categorías</h1>
           <p className="text-sm text-surface-500">
-            Árbol de categorías y subcategorías.
+            Árbol de categorías con profundidad ilimitada.
           </p>
         </div>
         {canManage && (
@@ -142,106 +250,24 @@ export default function CategoriasPage() {
       {isLoading && <p className="text-surface-500">Cargando…</p>}
       {isError && <p className="text-danger-600">Error al cargar categorías.</p>}
 
-      {categorias && (
+      {tree && (
         <ul className="space-y-3">
-          {padres.length === 0 && (
+          {tree.length === 0 && (
             <li className="text-center py-12 bg-white rounded-2xl border border-surface-200 text-surface-500">
               No hay categorías cargadas.
             </li>
           )}
-          {padres.map((padre) => {
-            const subs = hijos(padre.id);
-            return (
-              <li
-                key={padre.id}
-                className="bg-white rounded-2xl border border-surface-200 p-5"
-              >
-                {/* Categoría padre */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-warning-500">🏷️</span>
-                      <h3 className="font-bold text-surface-900">
-                        {padre.nombre}
-                      </h3>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-100 text-warning-600">
-                        CATEGORÍA
-                      </span>
-                    </div>
-                    {padre.descripcion && (
-                      <p className="text-sm text-surface-600 mt-1">
-                        {padre.descripcion}
-                      </p>
-                    )}
-                  </div>
-                  {canManage && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => openCreate(padre.id)}
-                        className="text-xs text-brand-600 font-semibold hover:underline"
-                      >
-                        + Subcategoría
-                      </button>
-                      <button
-                        onClick={() => openEdit(padre)}
-                        className="text-xs text-surface-700 font-semibold hover:underline"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(padre)}
-                        className="text-xs text-danger-600 font-semibold hover:underline"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Subcategorías */}
-                {subs.length > 0 && (
-                  <ul className="mt-4 ml-6 space-y-2 border-l-2 border-warning-200 pl-4">
-                    {subs.map((sub) => (
-                      <li
-                        key={sub.id}
-                        className="flex items-start justify-between py-2 px-3 rounded-lg bg-surface-50"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-warning-400">↳</span>
-                            <span className="font-medium text-surface-800">
-                              {sub.nombre}
-                            </span>
-                          </div>
-                          {sub.descripcion && (
-                            <p className="text-xs text-surface-500 ml-6 mt-0.5">
-                              {sub.descripcion}
-                            </p>
-                          )}
-                        </div>
-                        {canManage && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => openEdit(sub)}
-                              className="text-xs text-surface-700 font-semibold hover:underline"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleDelete(sub)}
-                              className="text-xs text-danger-600 font-semibold hover:underline"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
+          {tree.map((nodo) => (
+            <CategoriaNode
+              key={nodo.id}
+              nodo={nodo}
+              nivel={0}
+              canManage={canManage}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onAddChild={(parentId) => openCreate(parentId)}
+            />
+          ))}
         </ul>
       )}
 
@@ -270,15 +296,12 @@ export default function CategoriasPage() {
             </label>
             <textarea
               value={form.descripcion ?? ""}
-              onChange={(e) =>
-                setForm({ ...form, descripcion: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
               rows={2}
               className="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
 
-          {/* Selector de categoría padre */}
           <div>
             <label className="block text-xs font-semibold text-surface-700 mb-1">
               Categoría padre <span className="text-surface-400">(opcional)</span>
@@ -286,29 +309,19 @@ export default function CategoriasPage() {
             <select
               value={form.parent_id ?? ""}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  parent_id: e.target.value ? Number(e.target.value) : null,
-                })
+                setForm({ ...form, parent_id: e.target.value ? Number(e.target.value) : null })
               }
               className="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="">— Es categoría raíz —</option>
-              {(categorias ?? [])
-                .filter((c) => !c.parent_id) // solo padres
-                .filter((c) => !editing || c.id !== editing.id) // no editarse a sí misma
+              {(listaPlana ?? [])
+                .filter((c) => !editing || c.id !== editing.id)
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nombre}
                   </option>
                 ))}
             </select>
-            {form.parent_id && byId.has(form.parent_id) && (
-              <p className="text-xs text-surface-500 mt-1">
-                Será subcategoría de{" "}
-                <strong>{byId.get(form.parent_id)?.nombre}</strong>.
-              </p>
-            )}
           </div>
 
           {error && (
@@ -327,9 +340,7 @@ export default function CategoriasPage() {
             </button>
             <button
               type="submit"
-              disabled={
-                createMutation.isPending || updateMutation.isPending
-              }
+              disabled={createMutation.isPending || updateMutation.isPending}
               className="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
             >
               {editing ? "Guardar" : "Crear"}
