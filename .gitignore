@@ -31,3 +31,6 @@ Thumbs.db
 
 # Carpetas residuales del repo anterior (archivos bloqueados por Windows)
 Parcial 1 terminado/
+
+# Vite / Vitest temp files
+*.timestamp-*.mjs
