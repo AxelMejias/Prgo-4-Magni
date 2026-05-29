@@ -1,5 +1,6 @@
 import type {
   Categoria,
+  CategoriaTree,
   CategoriaInput,
   PaginatedCategorias,
   Ingrediente,
@@ -114,6 +115,8 @@ export const categoriasApi = {
     get<{ items: Categoria[]; total: number }>("/api/v1/categorias/?page=1&size=100").then(
       (r) => r.items
     ),
+  getTree: () =>
+    get<CategoriaTree[]>("/api/v1/categorias/tree"),
   getPaginated: (page = 1, size = 5) =>
     get<PaginatedCategorias>(`/api/v1/categorias/?page=${page}&size=${size}`),
   getById: (id: number) => get<Categoria>(`/api/v1/categorias/${id}`),

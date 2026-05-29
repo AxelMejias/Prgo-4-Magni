@@ -7,12 +7,14 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { productosApi, categoriasApi, ingredientesApi } from "../services/api";
 import type {
+  Ingrediente,
   ProductoListItem,
   ProductoCreate,
   ProductoUpdate,
 } from "../types";
 import Modal from "../components/Modal";
 import { useAuthStore } from "../shared/store/authStore";
+import InsumoSelector from "../features/productos-crud/ui/InsumoSelector";  
 
 type Tab = "activos" | "inactivos";
 
@@ -23,39 +25,28 @@ export default function ProductosPage() {
   const navigate = useNavigate();
   const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
 
-  // Estado en URL: ?tab=activos&page=2
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get("tab") as Tab) ?? "activos";
   const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
 
-  // Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [precio, setPrecio] = useState("");
+  const [margenGanancia, setMargenGanancia] = useState("0.30");
   const [selectedCategorias, setSelectedCategorias] = useState<number[]>([]);
-  const [selectedIngredientes, setSelectedIngredientes] = useState<
-    { ingrediente_id: number; cantidad: string }[]
-  >([]);
+  const [selectedInsumos, setSelectedInsumos] = useState<{ ingrediente_id: number; cantidad: string }[]>([]);
   const [error, setError] = useState("");
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
   // ── Queries ────────────────────────────────────────────────────────────────
-  const {
-    data: productosData,
-    isLoading,
-    isError,
-  } = useQuery({
+  const { data: productosData, isLoading, isError } = useQuery({
     queryKey: ["productos", "activos", currentPage],
     queryFn: () => productosApi.getAll(currentPage, PAGE_SIZE, { solo_disponibles: false }),
     enabled: tab === "activos",
   });
 
-  const {
-    data: inactivosData,
-    isLoading: isLoadingInactivos,
-    isError: isErrorInactivos,
-  } = useQuery({
+  const { data: inactivosData, isLoading: isLoadingInactivos, isError: isErrorInactivos } = useQuery({
     queryKey: ["productos", "inactivos", currentPage],
     queryFn: () => productosApi.getInactivos(currentPage, PAGE_SIZE),
     enabled: tab === "inactivos",
@@ -77,17 +68,30 @@ export default function ProductosPage() {
     enabled: !!editingId,
   });
 
+  // Cargar datos al editar
   useEffect(() => {
     if (editingDetail && editingId) {
       setSelectedCategorias(editingDetail.categorias.map((c) => c.id));
-      setSelectedIngredientes(
-        editingDetail.ingredientes.map((i) => ({
-          ingrediente_id: i.id,
+      setSelectedInsumos(
+        editingDetail.insumos.map((i) => ({
+          ingrediente_id: i.ingrediente_id,
           cantidad: String(i.cantidad),
         }))
       );
+      setMargenGanancia(String(editingDetail.margen_ganancia));
     }
   }, [editingDetail, editingId]);
+
+  // Descripción automática desde insumos
+  useEffect(() => {
+    if (!ingredientes) return;
+    const nombres = selectedInsumos
+      .filter((s) => s.ingrediente_id > 0)
+      .map((s) => ingredientes.find((i) => i.id === s.ingrediente_id)?.nombre)
+      .filter(Boolean)
+      .join(", ");
+    setDescripcion(nombres || "");
+  }, [selectedInsumos, ingredientes]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useMutation({
@@ -111,19 +115,15 @@ export default function ProductosPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => productosApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productos"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
   });
 
   const reactivarMutation = useMutation({
     mutationFn: (id: number) => productosApi.reactivar(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productos"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
   });
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function setCurrentPage(updater: number | ((p: number) => number)) {
     const next = typeof updater === "function" ? updater(currentPage) : updater;
     setSearchParams((prev) => {
@@ -141,9 +141,9 @@ export default function ProductosPage() {
     setEditingId(null);
     setNombre("");
     setDescripcion("");
-    setPrecio("");
+    setMargenGanancia("0.30");
     setSelectedCategorias([]);
-    setSelectedIngredientes([]);
+    setSelectedInsumos([]);
     setError("");
     setModalOpen(true);
   }
@@ -152,9 +152,9 @@ export default function ProductosPage() {
     setEditingId(prod.id);
     setNombre(prod.nombre);
     setDescripcion(prod.descripcion ?? "");
-    setPrecio(String(prod.precio));
+    setMargenGanancia(String(prod.margen_ganancia));
     setSelectedCategorias([]);
-    setSelectedIngredientes([]);
+    setSelectedInsumos([]);
     setError("");
     setModalOpen(true);
   }
@@ -168,33 +168,40 @@ export default function ProductosPage() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
-    const ingredientesValidos = selectedIngredientes
+
+    const insumosValidos = selectedInsumos
       .filter((i) => i.ingrediente_id > 0 && Number(i.cantidad) > 0)
       .map((i) => ({ ingrediente_id: i.ingrediente_id, cantidad: Number(i.cantidad) }));
+
+    if (insumosValidos.length === 0) {
+      setError("Debe agregar al menos un insumo.");
+      return;
+    }
+
     if (editingId) {
       updateMutation.mutate({
         id: editingId,
         data: {
           nombre,
           descripcion: descripcion || undefined,
-          precio: Number(precio),
+          margen_ganancia: Number(margenGanancia),
           categoria_ids: selectedCategorias,
-          ingredientes: ingredientesValidos,
+          insumos: insumosValidos,
         },
       });
     } else {
       createMutation.mutate({
         nombre,
         descripcion: descripcion || undefined,
-        precio: Number(precio),
+        margen_ganancia: Number(margenGanancia),
         categoria_ids: selectedCategorias,
-        ingredientes: ingredientesValidos,
+        insumos: insumosValidos,
       });
     }
   }
 
   function handleDelete(id: number) {
-    if (window.confirm("¿Estás seguro de eliminar este producto? Pasará a inactivos.")) {
+    if (window.confirm("¿Eliminar este producto? Pasará a inactivos.")) {
       deleteMutation.mutate(id);
     }
   }
@@ -205,22 +212,43 @@ export default function ProductosPage() {
     }
   }
 
-  function addIngrediente() {
-    setSelectedIngredientes((prev) => [...prev, { ingrediente_id: 0, cantidad: "" }]);
+  function addInsumo() {
+    setSelectorOpen(true);
   }
 
-  function removeIngrediente(index: number) {
-    setSelectedIngredientes((prev) => prev.filter((_, i) => i !== index));
+  function handleToggleInsumo(ing: Ingrediente) {
+  setSelectedInsumos((prev) => {
+    const exists = prev.find((s) => s.ingrediente_id === ing.id);
+    if (exists) {
+      return prev.filter((s) => s.ingrediente_id !== ing.id);
+    }
+    return [
+      ...prev,
+      {
+        ingrediente_id: ing.id,
+        cantidad: ing.es_producto_terminado ? "1" : "",
+      },
+    ];
+  });
+}
+
+  function removeInsumo(index: number) {
+    setSelectedInsumos((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function updateIngredienteId(index: number, value: number) {
-    setSelectedIngredientes((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, ingrediente_id: value } : item))
+  function updateInsumoId(index: number, value: number) {
+    const esTerminado = ingredientes?.find((i) => i.id === value)?.es_producto_terminado;
+    setSelectedInsumos((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, ingrediente_id: value, cantidad: esTerminado ? "1" : item.cantidad }
+          : item
+      )
     );
   }
 
-  function updateIngredienteCantidad(index: number, value: string) {
-    setSelectedIngredientes((prev) =>
+  function updateInsumoCantidad(index: number, value: string) {
+    setSelectedInsumos((prev) =>
       prev.map((item, i) => (i === index ? { ...item, cantidad: value } : item))
     );
   }
@@ -256,7 +284,7 @@ export default function ProductosPage() {
         {canManage && tab === "activos" && (
           <button
             onClick={openCreate}
-            className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-brand-500/25 hover:shadow-md hover:shadow-brand-500/30 cursor-pointer flex items-center gap-2"
+            className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer flex items-center gap-2"
           >
             <span className="text-lg leading-none">+</span>
             Nuevo Producto
@@ -269,9 +297,7 @@ export default function ProductosPage() {
         <button
           onClick={() => switchTab("activos")}
           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-            tab === "activos"
-              ? "bg-white text-brand-600 shadow-sm"
-              : "text-surface-500 hover:text-surface-700"
+            tab === "activos" ? "bg-white text-brand-600 shadow-sm" : "text-surface-500 hover:text-surface-700"
           }`}
         >
           ✓ Activos
@@ -279,9 +305,7 @@ export default function ProductosPage() {
         <button
           onClick={() => switchTab("inactivos")}
           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-            tab === "inactivos"
-              ? "bg-white text-danger-600 shadow-sm"
-              : "text-surface-500 hover:text-surface-700"
+            tab === "inactivos" ? "bg-white text-danger-600 shadow-sm" : "text-surface-500 hover:text-surface-700"
           }`}
         >
           🗑 Inactivos
@@ -306,7 +330,7 @@ export default function ProductosPage() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Tabla */}
       {currentData && (
         <div className="bg-white rounded-xl border border-surface-200 overflow-hidden shadow-sm">
           <table className="w-full">
@@ -316,20 +340,18 @@ export default function ProductosPage() {
                 <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Producto</th>
                 <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Descripción</th>
                 <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Precio</th>
+                <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Margen</th>
                 <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentData.items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-16 text-surface-400">
+                  <td colSpan={6} className="text-center py-16 text-surface-400">
                     <p className="text-3xl mb-2">📦</p>
                     <p className="font-medium">
                       {tab === "activos" ? "No hay productos activos" : "No hay productos inactivos"}
                     </p>
-                    {tab === "activos" && (
-                      <p className="text-xs mt-1">Creá el primero con el botón de arriba</p>
-                    )}
                   </td>
                 </tr>
               )}
@@ -363,16 +385,21 @@ export default function ProductosPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-surface-500">
-                    {prod.descripcion || <span className="italic text-surface-300">Sin descripción</span>}
+                  <td className="px-6 py-4 text-sm text-surface-500 max-w-[200px]">
+                    <span className="truncate block">
+                      {prod.descripcion || <span className="italic text-surface-300">Sin descripción</span>}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <span className={`inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold ${
-                      tab === "inactivos"
-                        ? "bg-surface-100 text-surface-400"
-                        : "bg-success-50 text-success-700"
+                      tab === "inactivos" ? "bg-surface-100 text-surface-400" : "bg-success-50 text-success-700"
                     }`}>
                       ${Number(prod.precio).toLocaleString("es-AR")}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="text-xs font-semibold text-surface-500">
+                      {(Number(prod.margen_ganancia) * 100).toFixed(0)}%
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -420,7 +447,7 @@ export default function ProductosPage() {
             </tbody>
           </table>
 
-          {/* Footer con paginación */}
+          {/* Paginación */}
           <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 flex items-center justify-between">
             <span className="text-xs text-surface-400">
               {currentData.total} resultado{currentData.total !== 1 && "s"} — página {currentData.page} de {currentData.pages || 1}
@@ -485,6 +512,7 @@ export default function ProductosPage() {
             </div>
           )}
 
+          {/* Nombre */}
           <div>
             <label className="block text-sm font-semibold text-surface-700 mb-1.5">
               Nombre <span className="text-danger-500">*</span>
@@ -494,38 +522,65 @@ export default function ProductosPage() {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
-              placeholder="Ej: Pan artesanal"
+              placeholder="Ej: Hamburguesa Clásica"
             />
           </div>
 
+          {/* Descripción automática */}
           <div>
             <label className="block text-sm font-semibold text-surface-700 mb-1.5">
-              Descripción
+              Descripción{" "}
+              <span className="text-xs font-normal text-surface-400">(generada automáticamente)</span>
             </label>
-            <input
-              type="text"
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
-              placeholder="Ej: Pan de masa madre"
-            />
+            <div className="w-full border border-surface-200 rounded-xl px-4 py-2.5 text-sm bg-surface-50 text-surface-600 min-h-[42px] leading-relaxed">
+              {selectedInsumos.filter((s) => s.ingrediente_id > 0).length === 0 ? (
+                <span className="text-surface-300 italic">Se completará al agregar insumos...</span>
+              ) : (
+                <ul className="space-y-1">
+                  {selectedInsumos
+                    .filter((s) => s.ingrediente_id > 0)
+                    .map((s) => {
+                      const ing = ingredientes?.find((i) => i.id === s.ingrediente_id);
+                      return ing ? (
+                        <li key={s.ingrediente_id} className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />
+                          <span>{ing.nombre}</span>
+                          {s.cantidad && (
+                            <span className="text-surface-400 text-xs">
+                              — {s.cantidad} {ing.unidad_medida}
+                            </span>
+                          )}
+                        </li>
+                      ) : null;
+                    })}
+                </ul>
+              )}
+            </div>
           </div>
 
+          {/* Margen de ganancia */}
           <div>
             <label className="block text-sm font-semibold text-surface-700 mb-1.5">
-              Precio <span className="text-danger-500">*</span>
+              Margen de ganancia <span className="text-danger-500">*</span>
             </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 text-sm font-medium">$</span>
+            <div className="flex items-center gap-3">
               <input
                 type="number"
+                min="0"
+                max="10"
                 step="0.01"
-                value={precio}
-                onChange={(e) => setPrecio(e.target.value)}
-                className="w-full border border-surface-300 rounded-xl pl-8 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
-                placeholder="500"
+                value={margenGanancia}
+                onChange={(e) => setMargenGanancia(e.target.value)}
+                className="flex-1 border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+                placeholder="0.30"
               />
+              <span className="text-sm font-bold text-brand-600 bg-brand-50 px-3 py-2 rounded-xl border border-brand-200 shrink-0">
+                {(Number(margenGanancia) * 100).toFixed(0)}%
+              </span>
             </div>
+            <p className="text-xs text-surface-400 mt-1">
+              El precio se calcula: costo total de insumos × (1 + margen)
+            </p>
           </div>
 
           {/* Categorías */}
@@ -535,14 +590,14 @@ export default function ProductosPage() {
                 Categorías
               </label>
               <div className="flex flex-wrap gap-2">
-                {categorias.filter((cat) => cat.parent_id != null).map((cat) => (
+                {categorias.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => toggleCategoria(cat.id)}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
                       selectedCategorias.includes(cat.id)
-                        ? "bg-brand-500 text-white border-brand-500 shadow-sm shadow-brand-500/25"
+                        ? "bg-brand-500 text-white border-brand-500 shadow-sm"
                         : "bg-white text-surface-600 border-surface-300 hover:border-brand-400 hover:text-brand-600"
                     }`}
                   >
@@ -554,69 +609,123 @@ export default function ProductosPage() {
             </div>
           )}
 
-          {/* Ingredientes */}
-          {(
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-surface-700">Ingredientes</label>
-                <button
-                  type="button"
-                  onClick={addIngrediente}
-                  className="text-brand-600 hover:text-brand-800 text-xs font-bold cursor-pointer flex items-center gap-1 bg-brand-50 px-3 py-1.5 rounded-lg hover:bg-brand-100 transition"
-                >
-                  + Agregar
-                </button>
+          {/* Insumos */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-surface-700">
+                Insumos <span className="text-danger-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={addInsumo}
+                className="text-brand-600 hover:text-brand-800 text-xs font-bold cursor-pointer flex items-center gap-1 bg-brand-50 px-3 py-1.5 rounded-lg hover:bg-brand-100 transition"
+              >
+                + Agregar
+              </button>
+            </div>
+            {selectedInsumos.length === 0 && (
+              <div className="bg-surface-50 rounded-xl p-4 text-center border border-dashed border-surface-300">
+                <p className="text-xs text-surface-400">Sin insumos seleccionados</p>
               </div>
-              {selectedIngredientes.length === 0 && (
-                <div className="bg-surface-50 rounded-xl p-4 text-center border border-dashed border-surface-300">
-                  <p className="text-xs text-surface-400">Sin ingredientes seleccionados</p>
-                </div>
-              )}
-              <div className="space-y-2">
-                {selectedIngredientes.map((item, index) => (
+            )}
+            <div className="space-y-2">
+              {selectedInsumos.map((item, index) => {
+                const ing = ingredientes?.find((i) => i.id === item.ingrediente_id);
+                const esTerminado = ing?.es_producto_terminado ?? false;
+                return (
                   <div
                     key={index}
                     className="flex gap-2 items-center bg-surface-50 rounded-xl p-2 border border-surface-200"
                   >
                     <select
                       value={item.ingrediente_id}
-                      onChange={(e) => updateIngredienteId(index, Number(e.target.value))}
+                      onChange={(e) => updateInsumoId(index, Number(e.target.value))}
                       className="flex-1 border border-surface-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition bg-white"
                     >
-                      <option value={0}>{ingredientes ? "Seleccionar..." : "Cargando..."}</option>
-                      {ingredientes?.filter((ing) =>
-                        !selectedIngredientes.some((s, i) => i !== index && s.ingrediente_id === ing.id)
-                      ).map((ing) => (
-                        <option key={ing.id} value={ing.id}>
-                          {ing.nombre} ({ing.unidad_medida})
-                        </option>
-                      ))}
+                      <option value={0}>{ingredientes ? "Seleccionar insumo..." : "Cargando..."}</option>
+                      {ingredientes
+                        ?.filter((i) => !selectedInsumos.some((s, idx) => idx !== index && s.ingrediente_id === i.id))
+                        .map((i) => (
+                          <option key={i.id} value={i.id}>
+                            {i.nombre} ({i.unidad_medida}) — ${Number(i.costo_unitario).toLocaleString("es-AR")}
+                            {i.es_producto_terminado ? " 📦" : ""}
+                          </option>
+                        ))}
                     </select>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="Cant."
-                      value={item.cantidad}
-                      onChange={(e) => updateIngredienteCantidad(index, e.target.value)}
-                      className="w-24 border border-surface-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition bg-white"
-                    />
+
+                    {esTerminado ? (
+                      <input
+                        type="number"
+                        value="1"
+                        disabled
+                        title="Producto terminado: cantidad fija en 1"
+                        className="w-24 border border-surface-200 rounded-lg px-3 py-2 text-sm bg-surface-100 text-surface-400 cursor-not-allowed"
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        min="0.001"
+                        step="0.001"
+                        placeholder="Cant."
+                        value={item.cantidad}
+                        onChange={(e) => updateInsumoCantidad(index, e.target.value)}
+                        className="w-24 border border-surface-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition bg-white"
+                      />
+                    )}
+
+                    {ing && item.cantidad && (
+                      <span className="text-xs text-surface-400 shrink-0 w-20 text-right">
+                        ${(Number(ing.costo_unitario) * Number(item.cantidad)).toLocaleString("es-AR")}
+                      </span>
+                    )}
                     <button
                       type="button"
-                      onClick={() => removeIngrediente(index)}
+                      onClick={() => removeInsumo(index)}
                       className="w-8 h-8 rounded-lg bg-danger-50 text-danger-500 hover:bg-danger-100 flex items-center justify-center transition cursor-pointer text-sm"
                     >
                       ×
                     </button>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          )}
+
+            {/* Preview precio calculado */}
+            {selectedInsumos.some((s) => s.ingrediente_id > 0 && Number(s.cantidad) > 0) && ingredientes && (
+              <div className="mt-3 bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 text-sm">
+                {(() => {
+                  const costo = selectedInsumos.reduce((acc, s) => {
+                    const ing = ingredientes.find((i) => i.id === s.ingrediente_id);
+                    return acc + (ing ? Number(ing.costo_unitario) * Number(s.cantidad) : 0);
+                  }, 0);
+                  const precio = costo * (1 + Number(margenGanancia));
+                  return (
+                    <div className="flex justify-between items-center">
+                      <div className="text-surface-600 space-y-0.5">
+                        <p>Costo total: <span className="font-semibold">${costo.toLocaleString("es-AR")}</span></p>
+                        <p className="text-xs text-surface-400">Margen {(Number(margenGanancia) * 100).toFixed(0)}%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-surface-400">Precio estimado</p>
+                        <p className="text-lg font-bold text-brand-700">${precio.toLocaleString("es-AR", { maximumFractionDigits: 2 })}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
 
           {editingId && isLoadingDetail && (
             <div className="text-center py-2 text-xs text-surface-400">Cargando datos actuales...</div>
           )}
+
+          <InsumoSelector
+            open={selectorOpen}
+            onClose={() => setSelectorOpen(false)}
+            selectedIds={selectedInsumos.map((s) => s.ingrediente_id)}
+            onToggle={handleToggleInsumo}
+          />
 
           <div className="flex justify-end gap-3 pt-3 border-t border-surface-100">
             <button
@@ -629,7 +738,7 @@ export default function ProductosPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-brand-500/25 cursor-pointer"
+              className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer"
             >
               {isSaving ? "Guardando..." : editingId ? "Actualizar" : "Crear Producto"}
             </button>

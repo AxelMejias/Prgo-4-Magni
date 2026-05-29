@@ -4,8 +4,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCartStore } from "../features/cart/model/cartStore";
 import { pedidoApi } from "../entities/pedido/api";
 import { direccionApi, type Direccion } from "../entities/direccion/api";
-import { formatARS, toNumber } from "../shared/lib/format";
+import { formatARS } from "../shared/lib/format";
 import type { PedidoCreate } from "../entities/pedido/model";
+import type { InsumoFaltante, StockInsuficienteError } from "../types";
 
 const COSTO_ENVIO = 50;
 
@@ -21,6 +22,7 @@ export default function CheckoutPage() {
   const [formaPago, setFormaPago] = useState("");
   const [notas, setNotas] = useState("");
   const [formError, setFormError] = useState("");
+  const [faltantes, setFaltantes] = useState<InsumoFaltante[]>([]);
 
   const { data: formasPago, isLoading: loadingPago } = useQuery({
     queryKey: ["formas-pago"],
@@ -43,7 +45,17 @@ export default function CheckoutPage() {
       clearCart();
       navigate("/mis-pedidos");
     },
-    onError: (err: Error) => setFormError(err.message),
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: StockInsuficienteError } };
+      const data = axiosErr?.response?.data;
+      if (data?.code === "STOCK_INSUFICIENTE") {
+        setFaltantes(data.faltantes);
+        setFormError("No hay stock suficiente para completar el pedido.");
+      } else {
+        setFaltantes([]);
+        setFormError((err as Error).message ?? "Error al crear el pedido.");
+      }
+    },
   });
 
   function handleTipoEntrega(tipo: TipoEntrega) {
@@ -54,6 +66,7 @@ export default function CheckoutPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
+    setFaltantes([]);
 
     if (items.length === 0) {
       setFormError("El carrito está vacío.");
@@ -263,10 +276,41 @@ export default function CheckoutPage() {
             />
           </section>
 
+          {/* Error general + detalle de stock insuficiente */}
           {formError && (
-            <p className="text-sm text-danger-600 bg-danger-50 border border-danger-200 rounded-xl px-4 py-3">
-              {formError}
-            </p>
+            <div className="bg-danger-50 border border-danger-200 rounded-xl px-4 py-3 space-y-3">
+              <p className="text-sm text-danger-600 font-semibold">{formError}</p>
+
+              {faltantes.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-bold text-danger-700 uppercase tracking-wide">
+                    Insumos con stock insuficiente:
+                  </p>
+                  {faltantes.map((f) => (
+                    <div
+                      key={f.insumo_id}
+                      className="flex items-center justify-between bg-white border border-danger-100 rounded-lg px-3 py-2 text-xs"
+                    >
+                      <span className="font-medium text-surface-800">{f.nombre}</span>
+                      <div className="text-right text-surface-500 space-y-0.5">
+                        <p>
+                          Disponible:{" "}
+                          <span className="text-danger-600 font-bold">
+                            {f.stock_actual} {f.unidad_medida}
+                          </span>
+                        </p>
+                        <p>
+                          Necesario:{" "}
+                          <span className="font-bold">
+                            {f.stock_requerido} {f.unidad_medida}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <button

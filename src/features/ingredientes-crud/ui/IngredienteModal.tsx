@@ -16,6 +16,10 @@ const EMPTY: IngredienteCreate = {
   descripcion: "",
   unidad_medida: "",
   es_alergeno: false,
+  costo_unitario: 0,
+  stock_cantidad: 0,
+  stock_minimo: 0,
+  es_producto_terminado: false,
 };
 
 export default function IngredienteModal({
@@ -27,6 +31,9 @@ export default function IngredienteModal({
   error,
 }: IngredienteModalProps) {
   const [form, setForm] = useState<IngredienteCreate>(EMPTY);
+  const [costoStr, setCostoStr] = useState("");
+  const [stockStr, setStockStr] = useState("");
+  const [minimoStr, setMinimoStr] = useState("");
 
   useEffect(() => {
     if (editing) {
@@ -35,9 +42,19 @@ export default function IngredienteModal({
         descripcion: editing.descripcion ?? "",
         unidad_medida: editing.unidad_medida,
         es_alergeno: editing.es_alergeno,
+        costo_unitario: Number(editing.costo_unitario),
+        stock_cantidad: Number(editing.stock_cantidad),
+        stock_minimo: Number(editing.stock_minimo),
+        es_producto_terminado: editing.es_producto_terminado,
       });
+      setCostoStr(String(Number(editing.costo_unitario)));
+      setStockStr(String(Number(editing.stock_cantidad)));
+      setMinimoStr(String(Number(editing.stock_minimo)));
     } else {
       setForm(EMPTY);
+      setCostoStr("");
+      setStockStr("");
+      setMinimoStr("");
     }
   }, [editing, open]);
 
@@ -59,6 +76,7 @@ export default function IngredienteModal({
           </div>
         )}
 
+        {/* Nombre */}
         <div>
           <label className="block text-sm font-semibold text-surface-700 mb-1.5">
             Nombre <span className="text-danger-500">*</span>
@@ -69,10 +87,11 @@ export default function IngredienteModal({
             onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
             maxLength={100}
             className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
-            placeholder="Ej: Harina"
+            placeholder="Ej: Harina de trigo"
           />
         </div>
 
+        {/* Descripción */}
         <div>
           <label className="block text-sm font-semibold text-surface-700 mb-1.5">
             Descripción
@@ -87,6 +106,7 @@ export default function IngredienteModal({
           />
         </div>
 
+        {/* Unidad de medida */}
         <div>
           <label className="block text-sm font-semibold text-surface-700 mb-1.5">
             Unidad de Medida <span className="text-danger-500">*</span>
@@ -97,22 +117,97 @@ export default function IngredienteModal({
             onChange={(e) => setForm((f) => ({ ...f, unidad_medida: e.target.value }))}
             maxLength={50}
             className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
-            placeholder="Ej: kg, lt, unidad"
+            placeholder="Ej: kg, lt, unidades"
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <input
-            id="es_alergeno"
-            type="checkbox"
-            checked={form.es_alergeno}
-            onChange={(e) => setForm((f) => ({ ...f, es_alergeno: e.target.checked }))}
-            className="w-4 h-4 accent-orange-500 cursor-pointer"
-          />
-          <label htmlFor="es_alergeno" className="text-sm font-semibold text-surface-700 cursor-pointer">
-            Es alérgeno{" "}
-            <span className="text-xs font-normal text-orange-500">(Reg. UE 1169/2011)</span>
-          </label>
+        {/* Fila: costo + stock actual + stock mínimo */}
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-sm font-semibold text-surface-700 mb-1.5">
+              Costo unitario <span className="text-danger-500">*</span>
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={costoStr}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9.,]/g, "");
+                setCostoStr(val);
+                setForm((f) => ({ ...f, costo_unitario: Number(val) }));
+              }}
+              onFocus={(e) => e.target.select()}
+              className="w-full border border-surface-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-surface-700 mb-1.5">
+              Stock actual
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={stockStr}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9.,]/g, "");
+                setStockStr(val);
+                setForm((f) => ({ ...f, stock_cantidad: Number(val) }));
+              }}
+              onFocus={(e) => e.target.select()}
+              className="w-full border border-surface-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+              placeholder="0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-surface-700 mb-1.5">
+              Stock mínimo
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={minimoStr}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9.,]/g, "");
+                setMinimoStr(val);
+                setForm((f) => ({ ...f, stock_minimo: Number(val) }));
+              }}
+              onFocus={(e) => e.target.select()}
+              className="w-full border border-surface-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+              placeholder="0"
+            />
+          </div>
+        </div>
+
+        {/* Checkboxes */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <input
+              id="es_alergeno"
+              type="checkbox"
+              checked={form.es_alergeno}
+              onChange={(e) => setForm((f) => ({ ...f, es_alergeno: e.target.checked }))}
+              className="w-4 h-4 accent-orange-500 cursor-pointer"
+            />
+            <label htmlFor="es_alergeno" className="text-sm font-semibold text-surface-700 cursor-pointer">
+              Es alérgeno{" "}
+              <span className="text-xs font-normal text-orange-500">(Reg. UE 1169/2011)</span>
+            </label>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              id="es_producto_terminado"
+              type="checkbox"
+              checked={form.es_producto_terminado}
+              onChange={(e) => setForm((f) => ({ ...f, es_producto_terminado: e.target.checked }))}
+              className="w-4 h-4 accent-brand-500 cursor-pointer"
+            />
+            <label htmlFor="es_producto_terminado" className="text-sm font-semibold text-surface-700 cursor-pointer">
+              Es producto terminado{" "}
+              <span className="text-xs font-normal text-surface-400">(ej: Coca-Cola)</span>
+            </label>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-3 border-t border-surface-100">

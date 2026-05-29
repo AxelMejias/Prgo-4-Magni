@@ -4,6 +4,10 @@ export interface Ingrediente {
   descripcion?: string;
   unidad_medida: string;
   es_alergeno: boolean;
+  costo_unitario: number;
+  stock_cantidad: number;
+  stock_minimo: number;
+  es_producto_terminado: boolean;
   created_at: string;
   updated_at?: string;
   deleted_at?: string;
@@ -22,6 +26,10 @@ export interface IngredienteCreate {
   descripcion?: string;
   unidad_medida: string;
   es_alergeno: boolean;
+  costo_unitario: number;
+  stock_cantidad: number;
+  stock_minimo: number;
+  es_producto_terminado: boolean;
 }
 
 export interface IngredienteUpdate {
@@ -29,6 +37,10 @@ export interface IngredienteUpdate {
   descripcion?: string;
   unidad_medida?: string;
   es_alergeno?: boolean;
+  costo_unitario?: number;
+  stock_cantidad?: number;
+  stock_minimo?: number;
+  es_producto_terminado?: boolean;
 }
 
 export interface IngredienteFilters {
