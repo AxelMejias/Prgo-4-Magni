@@ -761,6 +761,7 @@ export default function ProductosPage() {
         open={modalOpen}
         onClose={closeModal}
         title={editingId ? "Editar Producto" : "Nuevo Producto"}
+        size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
