@@ -43,7 +43,7 @@ export default function ProductosPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [margenGanancia, setMargenGanancia] = useState("0.30");
+  const [margenGanancia, setMargenGanancia] = useState("30");
   const [selectedCategorias, setSelectedCategorias] = useState<number[]>([]);
   const [selectedInsumos, setSelectedInsumos] = useState<{ ingrediente_id: number; cantidad: string }[]>([]);
   const [error, setError] = useState("");
@@ -100,7 +100,7 @@ export default function ProductosPage() {
           cantidad: String(i.cantidad),
         }))
       );
-      setMargenGanancia(String(editingDetail.margen_ganancia));
+      setMargenGanancia(String(Math.round(Number(editingDetail.margen_ganancia) * 100)));
     }
   }, [editingDetail, editingId]);
 
@@ -230,7 +230,7 @@ export default function ProductosPage() {
     setEditingId(null);
     setNombre("");
     setDescripcion("");
-    setMargenGanancia("0.30");
+    setMargenGanancia("30");
     setSelectedCategorias([]);
     setSelectedInsumos([]);
     setError("");
@@ -241,7 +241,7 @@ export default function ProductosPage() {
     setEditingId(prod.id);
     setNombre(prod.nombre);
     setDescripcion(prod.descripcion ?? "");
-    setMargenGanancia(String(prod.margen_ganancia));
+    setMargenGanancia(String(Math.round(Number(prod.margen_ganancia) * 100)));
     setSelectedCategorias([]);
     setSelectedInsumos([]);
     setError("");
@@ -273,7 +273,7 @@ export default function ProductosPage() {
         data: {
           nombre,
           descripcion: descripcion || undefined,
-          margen_ganancia: Number(margenGanancia),
+          margen_ganancia: Number(margenGanancia) / 100,
           categoria_ids: selectedCategorias,
           insumos: insumosValidos,
         },
@@ -282,7 +282,7 @@ export default function ProductosPage() {
       createMutation.mutate({
         nombre,
         descripcion: descripcion || undefined,
-        margen_ganancia: Number(margenGanancia),
+        margen_ganancia: Number(margenGanancia) / 100,
         categoria_ids: selectedCategorias,
         insumos: insumosValidos,
       });
@@ -827,20 +827,33 @@ export default function ProductosPage() {
             <label className="block text-sm font-semibold text-surface-700 mb-1.5">
               Margen de ganancia <span className="text-danger-500">*</span>
             </label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-2">
               <input
                 type="number"
                 min="0"
-                max="10"
-                step="0.01"
+                max="999"
+                step="1"
                 value={margenGanancia}
                 onChange={(e) => setMargenGanancia(e.target.value)}
-                className="flex-1 border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
-                placeholder="0.30"
+                className="w-24 border border-surface-300 rounded-xl px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
               />
               <span className="text-sm font-bold text-brand-600 bg-brand-50 px-3 py-2 rounded-xl border border-brand-200 shrink-0">
-                {(Number(margenGanancia) * 100).toFixed(0)}%
+                {Number(margenGanancia).toFixed(0)}%
               </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="200"
+              step="1"
+              value={Math.min(Number(margenGanancia), 200)}
+              onChange={(e) => setMargenGanancia(e.target.value)}
+              className="w-full accent-brand-600"
+            />
+            <div className="flex justify-between text-[10px] text-surface-400 mt-0.5">
+              <span>0%</span>
+              <span>100%</span>
+              <span>200%</span>
             </div>
             <p className="text-xs text-surface-400 mt-1">
               El precio se calcula: costo total de insumos × (1 + margen)
@@ -962,12 +975,12 @@ export default function ProductosPage() {
                     const ing = ingredientes.find((i) => i.id === s.ingrediente_id);
                     return acc + (ing ? Number(ing.costo_unitario) * Number(s.cantidad) : 0);
                   }, 0);
-                  const precio = costo * (1 + Number(margenGanancia));
+                  const precio = costo * (1 + Number(margenGanancia) / 100);
                   return (
                     <div className="flex justify-between items-center">
                       <div className="text-surface-600 space-y-0.5">
                         <p>Costo total: <span className="font-semibold">${costo.toLocaleString("es-AR")}</span></p>
-                        <p className="text-xs text-surface-400">Margen {(Number(margenGanancia) * 100).toFixed(0)}%</p>
+                        <p className="text-xs text-surface-400">Margen {Number(margenGanancia).toFixed(0)}%</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-surface-400">Precio estimado</p>
