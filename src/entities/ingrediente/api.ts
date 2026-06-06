@@ -53,6 +53,7 @@ export const ingredienteApi = {
     const params: Record<string, unknown> = { page: filters.page, size: filters.size };
     if (filters.nombre) params.nombre = filters.nombre;
     if (filters.es_alergeno !== undefined) params.es_alergeno = filters.es_alergeno;
+    if (filters.es_producto_terminado !== undefined) params.es_producto_terminado = filters.es_producto_terminado;
     const { data } = await axiosClient.get("/api/v1/ingredientes/", { params });
     return data;
   },

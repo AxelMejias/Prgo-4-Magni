@@ -186,12 +186,14 @@ export const productosApi = {
   getAll: (
     page = 1,
     size = 20,
-    params?: { nombre?: string; solo_disponibles?: boolean }
+    params?: { nombre?: string; solo_disponibles?: boolean; categoria_id?: number }
   ) => {
     const qs = new URLSearchParams({ page: String(page), size: String(size) });
     if (params?.nombre) qs.set("nombre", params.nombre);
     if (params?.solo_disponibles !== undefined)
       qs.set("solo_disponibles", String(params.solo_disponibles));
+    if (params?.categoria_id !== undefined)
+      qs.set("categoria_id", String(params.categoria_id));
     return get<PaginatedProductos>(`/api/v1/productos/?${qs}`);
   },
   getAllForSelect: () =>
@@ -213,4 +215,53 @@ export const productosApi = {
       headers: authHeaders(),
       credentials: "include",
     }).then((r) => handleResponse<ProductoDetalle>(r)),
+
+  exportToExcel: async (): Promise<void> => {
+    const token = useAuthStore.getState().accessToken;
+    const response = await fetch(`${BASE}/api/v1/productos/exportar`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error(`Error ${response.status}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "productos.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
+  },
+
+  descargarPlantilla: async (): Promise<void> => {
+    const token = useAuthStore.getState().accessToken;
+    const response = await fetch(`${BASE}/api/v1/productos/plantilla`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error(`Error ${response.status}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "plantilla_productos.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
+  },
+
+  importarExcel: async (file: File): Promise<{ creados: number; omitidos: number; errores: { fila: number; nombre: string; motivo: string }[] }> => {
+    const token = useAuthStore.getState().accessToken;
+    const form = new FormData();
+    form.append("archivo", file);
+    const response = await fetch(`${BASE}/api/v1/productos/importar`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+      body: form,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.detail || `Error ${response.status}`);
+    }
+    return response.json();
+  },
 };

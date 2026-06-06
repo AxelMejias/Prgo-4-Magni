@@ -14,7 +14,8 @@ import type {
 } from "../types";
 import Modal from "../components/Modal";
 import { useAuthStore } from "../shared/store/authStore";
-import InsumoSelector from "../features/productos-crud/ui/InsumoSelector";  
+import InsumoSelector from "../features/productos-crud/ui/InsumoSelector";
+import FilterBarProductos from "../features/productos-filter/ui/FilterBar";
 
 type Tab = "activos" | "inactivos";
 
@@ -28,7 +29,16 @@ export default function ProductosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get("tab") as Tab) ?? "activos";
   const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
+  const nombreParam = searchParams.get("nombre") ?? "";
+  const categoriaParam = searchParams.get("categoria_id");
+  const categoriaId = categoriaParam ? Number(categoriaParam) : undefined;
+  const soloDispRaw = searchParams.get("solo_disponibles");
+  const soloDisponibles: boolean | undefined =
+    soloDispRaw === "true" ? true : soloDispRaw === "false" ? false : undefined;
 
+  const [nombreInput, setNombreInput] = useState(nombreParam);
+
+  // ── Modal CRUD ─────────────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nombre, setNombre] = useState("");
@@ -39,10 +49,22 @@ export default function ProductosPage() {
   const [error, setError] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
 
+  // ── Excel ──────────────────────────────────────────────────────────────────
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    creados: number; omitidos: number; errores: { fila: number; nombre: string; motivo: string }[];
+  } | null>(null);
+
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: productosData, isLoading, isError } = useQuery({
-    queryKey: ["productos", "activos", currentPage],
-    queryFn: () => productosApi.getAll(currentPage, PAGE_SIZE, { solo_disponibles: false }),
+    queryKey: ["productos", "activos", currentPage, nombreParam, soloDisponibles, categoriaId],
+    queryFn: () =>
+      productosApi.getAll(currentPage, PAGE_SIZE, {
+        nombre: nombreParam || undefined,
+        solo_disponibles: soloDisponibles,
+        categoria_id: categoriaId,
+      }),
     enabled: tab === "activos",
   });
 
@@ -123,7 +145,7 @@ export default function ProductosPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
   });
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers de URL ─────────────────────────────────────────────────────────
   function setCurrentPage(updater: number | ((p: number) => number)) {
     const next = typeof updater === "function" ? updater(currentPage) : updater;
     setSearchParams((prev) => {
@@ -137,6 +159,73 @@ export default function ProductosPage() {
     setSearchParams({ tab: t, page: "1" });
   }
 
+  function handleNombreChange(v: string) {
+    setNombreInput(v);
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("page", "1");
+      if (v) params.set("nombre", v);
+      else params.delete("nombre");
+      return params;
+    });
+  }
+
+  function handleSoloDisponiblesChange(v: boolean | undefined) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("page", "1");
+      if (v === undefined) params.delete("solo_disponibles");
+      else params.set("solo_disponibles", String(v));
+      return params;
+    });
+  }
+
+  function handleCategoriaChange(v: number | undefined) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("page", "1");
+      if (v === undefined) params.delete("categoria_id");
+      else params.set("categoria_id", String(v));
+      return params;
+    });
+  }
+
+  function handleResetFilters() {
+    setNombreInput("");
+    setSearchParams({ tab: "activos", page: "1" });
+  }
+
+  // ── Excel handlers ─────────────────────────────────────────────────────────
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      await productosApi.exportToExcel();
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleImport(file: File) {
+    setIsImporting(true);
+    try {
+      const result = await productosApi.importarExcel(file);
+      setImportResult(result);
+      queryClient.invalidateQueries({ queryKey: ["productos"] });
+    } catch (err) {
+      setImportResult({
+        creados: 0, omitidos: 0,
+        errores: [{ fila: 0, nombre: "", motivo: err instanceof Error ? err.message : "Error inesperado" }],
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  async function handleDescargarPlantilla() {
+    await productosApi.descargarPlantilla();
+  }
+
+  // ── Modal CRUD helpers ─────────────────────────────────────────────────────
   function openCreate() {
     setEditingId(null);
     setNombre("");
@@ -212,25 +301,13 @@ export default function ProductosPage() {
     }
   }
 
-  function addInsumo() {
-    setSelectorOpen(true);
-  }
-
   function handleToggleInsumo(ing: Ingrediente) {
-  setSelectedInsumos((prev) => {
-    const exists = prev.find((s) => s.ingrediente_id === ing.id);
-    if (exists) {
-      return prev.filter((s) => s.ingrediente_id !== ing.id);
-    }
-    return [
-      ...prev,
-      {
-        ingrediente_id: ing.id,
-        cantidad: ing.es_producto_terminado ? "1" : "",
-      },
-    ];
-  });
-}
+    setSelectedInsumos((prev) => {
+      const exists = prev.find((s) => s.ingrediente_id === ing.id);
+      if (exists) return prev.filter((s) => s.ingrediente_id !== ing.id);
+      return [...prev, { ingrediente_id: ing.id, cantidad: ing.es_producto_terminado ? "1" : "" }];
+    });
+  }
 
   function removeInsumo(index: number) {
     setSelectedInsumos((prev) => prev.filter((_, i) => i !== index));
@@ -317,95 +394,97 @@ export default function ProductosPage() {
         </button>
       </div>
 
-      {/* Loading / Error */}
-      {currentLoading && (
-        <div className="bg-white rounded-xl border border-surface-200 p-16 text-center">
-          <div className="w-10 h-10 border-3 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-surface-400 text-sm">Cargando productos...</p>
-        </div>
-      )}
-      {currentError && (
-        <div className="bg-danger-50 border border-danger-100 rounded-xl p-6 text-center text-danger-600">
-          Error al cargar los productos
-        </div>
-      )}
+      {/* ── Tab: Activos ── */}
+      {tab === "activos" && (
+        <>
+          <FilterBarProductos
+            nombre={nombreInput}
+            soloDisponibles={soloDisponibles}
+            categoriaId={categoriaId}
+            categorias={categorias ?? []}
+            onNombreChange={handleNombreChange}
+            onSoloDisponiblesChange={handleSoloDisponiblesChange}
+            onCategoriaChange={handleCategoriaChange}
+            onReset={handleResetFilters}
+            onExport={handleExport}
+            isExporting={isExporting}
+            canManage={canManage}
+            onImport={handleImport}
+            isImporting={isImporting}
+            onDescargarPlantilla={handleDescargarPlantilla}
+          />
 
-      {/* Tabla */}
-      {currentData && (
-        <div className="bg-white rounded-xl border border-surface-200 overflow-hidden shadow-sm">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-surface-50 border-b border-surface-200">
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">ID</th>
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Producto</th>
-                <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Descripción</th>
-                <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Precio</th>
-                <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Margen</th>
-                <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentData.items.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-16 text-surface-400">
-                    <p className="text-3xl mb-2">📦</p>
-                    <p className="font-medium">
-                      {tab === "activos" ? "No hay productos activos" : "No hay productos inactivos"}
-                    </p>
-                  </td>
-                </tr>
-              )}
-              {currentData.items.map((prod, i) => (
-                <tr
-                  key={prod.id}
-                  className={`border-b border-surface-100 last:border-0 ${
-                    tab === "inactivos"
-                      ? "bg-gray-50 opacity-75"
-                      : i % 2 === 0
-                      ? "bg-white hover:bg-surface-50/50"
-                      : "bg-surface-50/30 hover:bg-surface-50"
-                  }`}
-                >
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface-100 text-xs font-bold text-surface-500">
-                      {prod.id}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {tab === "activos" ? (
-                      <button
-                        onClick={() => navigate(`/productos/${prod.id}`)}
-                        className="font-semibold text-sm text-brand-600 hover:text-brand-800 transition-colors cursor-pointer hover:underline underline-offset-2"
-                      >
-                        {prod.nombre}
-                      </button>
-                    ) : (
-                      <span className="font-semibold text-sm text-surface-400 line-through">
-                        {prod.nombre}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-surface-500 max-w-[200px]">
-                    <span className="truncate block">
-                      {prod.descripcion || <span className="italic text-surface-300">Sin descripción</span>}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold ${
-                      tab === "inactivos" ? "bg-surface-100 text-surface-400" : "bg-success-50 text-success-700"
-                    }`}>
-                      ${Number(prod.precio).toLocaleString("es-AR")}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="text-xs font-semibold text-surface-500">
-                      {(Number(prod.margen_ganancia) * 100).toFixed(0)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      {tab === "activos" && (
-                        <>
+          {currentLoading && (
+            <div className="bg-white rounded-xl border border-surface-200 p-16 text-center">
+              <div className="w-10 h-10 border-3 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-surface-400 text-sm">Cargando productos...</p>
+            </div>
+          )}
+          {currentError && (
+            <div className="bg-danger-50 border border-danger-100 rounded-xl p-6 text-center text-danger-600">
+              Error al cargar los productos
+            </div>
+          )}
+
+          {productosData && (
+            <div className="bg-white rounded-xl border border-surface-200 overflow-hidden shadow-sm">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-surface-50 border-b border-surface-200">
+                    <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">ID</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Producto</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Descripción</th>
+                    <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Precio</th>
+                    <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Margen</th>
+                    <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productosData.items.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16 text-surface-400">
+                        <p className="text-3xl mb-2">📦</p>
+                        <p className="font-medium">No hay productos que coincidan con los filtros</p>
+                      </td>
+                    </tr>
+                  )}
+                  {productosData.items.map((prod, i) => (
+                    <tr
+                      key={prod.id}
+                      className={`border-b border-surface-100 last:border-0 ${
+                        i % 2 === 0 ? "bg-white hover:bg-surface-50/50" : "bg-surface-50/30 hover:bg-surface-50"
+                      }`}
+                    >
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface-100 text-xs font-bold text-surface-500">
+                          {prod.id}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => navigate(`/productos/${prod.id}`)}
+                          className="font-semibold text-sm text-brand-600 hover:text-brand-800 transition-colors cursor-pointer hover:underline underline-offset-2"
+                        >
+                          {prod.nombre}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-surface-500 max-w-[200px]">
+                        <span className="truncate block">
+                          {prod.descripcion || <span className="italic text-surface-300">Sin descripción</span>}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-success-50 text-success-700">
+                          ${Number(prod.precio).toLocaleString("es-AR")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-xs font-semibold text-surface-500">
+                          {(Number(prod.margen_ganancia) * 100).toFixed(0)}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => navigate(`/productos/${prod.id}`)}
                             className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all text-xs font-semibold cursor-pointer"
@@ -429,70 +508,255 @@ export default function ProductosPage() {
                               🗑️
                             </button>
                           )}
-                        </>
-                      )}
-                      {tab === "inactivos" && canManage && (
-                        <button
-                          onClick={() => handleReactivar(prod)}
-                          disabled={reactivarMutation.isPending}
-                          className="p-2 rounded-lg bg-success-50 text-success-700 hover:bg-success-100 disabled:opacity-50 transition-all text-xs font-semibold cursor-pointer"
-                        >
-                          ♻️ Reactivar
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-          {/* Paginación */}
-          <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 flex items-center justify-between">
-            <span className="text-xs text-surface-400">
-              {currentData.total} resultado{currentData.total !== 1 && "s"} — página {currentData.page} de {currentData.pages || 1}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage((p) => p - 1)}
-                disabled={currentPage <= 1}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
-              >
-                ← Anterior
-              </button>
-              {(() => {
-                const startPage = Math.max(1, Math.min(currentPage - 2, currentData.pages - 4));
-                const endPage = Math.min(currentData.pages, startPage + 4);
-                return Array.from({ length: endPage - startPage + 1 }, (_, i) => {
-                  const p = startPage + i;
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => setCurrentPage(p)}
-                      className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
-                        p === currentPage
-                          ? "bg-brand-500 text-white shadow-sm"
-                          : "border border-surface-200 hover:bg-surface-100 text-surface-600"
-                      }`}
+              {/* Paginación */}
+              <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 flex items-center justify-between">
+                <span className="text-xs text-surface-400">
+                  {productosData.total} resultado{productosData.total !== 1 && "s"} — página {productosData.page} de {productosData.pages || 1}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    disabled={currentPage <= 1}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                  >
+                    ← Anterior
+                  </button>
+                  {(() => {
+                    const startPage = Math.max(1, Math.min(currentPage - 2, productosData.pages - 4));
+                    const endPage = Math.min(productosData.pages, startPage + 4);
+                    return Array.from({ length: endPage - startPage + 1 }, (_, i) => {
+                      const p = startPage + i;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p)}
+                          className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                            p === currentPage
+                              ? "bg-brand-500 text-white shadow-sm"
+                              : "border border-surface-200 hover:bg-surface-100 text-surface-600"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    });
+                  })()}
+                  <button
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    disabled={currentPage >= (productosData.pages || 1)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Tab: Inactivos ── */}
+      {tab === "inactivos" && (
+        <>
+          {isLoadingInactivos && (
+            <div className="bg-white rounded-xl border border-surface-200 p-16 text-center">
+              <div className="w-10 h-10 border-3 border-danger-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-surface-400 text-sm">Cargando productos inactivos...</p>
+            </div>
+          )}
+          {isErrorInactivos && (
+            <div className="bg-danger-50 border border-danger-100 rounded-xl p-6 text-center text-danger-600">
+              Error al cargar los productos inactivos
+            </div>
+          )}
+
+          {inactivosData && (
+            <div className="bg-white rounded-xl border border-surface-200 overflow-hidden shadow-sm">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-surface-50 border-b border-surface-200">
+                    <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">ID</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Nombre</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Descripción</th>
+                    <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Precio</th>
+                    <th className="text-right px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Margen</th>
+                    <th className="text-center px-6 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inactivosData.items.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16 text-surface-400">
+                        <p className="text-3xl mb-2">✨</p>
+                        <p className="font-medium">No hay productos inactivos</p>
+                      </td>
+                    </tr>
+                  )}
+                  {inactivosData.items.map((prod, i) => (
+                    <tr
+                      key={prod.id}
+                      className={`border-b border-surface-100 last:border-0 bg-gray-50 opacity-75 ${i % 2 === 0 ? "" : "bg-gray-100/50"}`}
                     >
-                      {p}
-                    </button>
-                  );
-                });
-              })()}
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface-100 text-xs font-bold text-surface-400">
+                          {prod.id}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-semibold text-sm text-surface-400 line-through">
+                          {prod.nombre}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-surface-400 max-w-[200px]">
+                        <span className="truncate block">{prod.descripcion || "—"}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-surface-100 text-surface-400">
+                          ${Number(prod.precio).toLocaleString("es-AR")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-xs font-semibold text-surface-400">
+                          {(Number(prod.margen_ganancia) * 100).toFixed(0)}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {canManage && (
+                          <button
+                            onClick={() => handleReactivar(prod)}
+                            disabled={reactivarMutation.isPending}
+                            className="p-2 rounded-lg bg-success-50 text-success-700 hover:bg-success-100 disabled:opacity-50 transition-all text-xs font-semibold cursor-pointer"
+                          >
+                            ♻️ Reactivar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="px-6 py-3 bg-surface-50 border-t border-surface-200 flex items-center justify-between">
+                <span className="text-xs text-surface-400">
+                  {inactivosData.total} resultado{inactivosData.total !== 1 && "s"} — página {inactivosData.page} de {inactivosData.pages || 1}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    disabled={currentPage <= 1}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                  >
+                    ← Anterior
+                  </button>
+                  {(() => {
+                    const startPage = Math.max(1, Math.min(currentPage - 2, inactivosData.pages - 4));
+                    const endPage = Math.min(inactivosData.pages, startPage + 4);
+                    return Array.from({ length: endPage - startPage + 1 }, (_, i) => {
+                      const p = startPage + i;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p)}
+                          className={`w-8 h-8 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                            p === currentPage
+                              ? "bg-danger-500 text-white shadow-sm"
+                              : "border border-surface-200 hover:bg-surface-100 text-surface-600"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    });
+                  })()}
+                  <button
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    disabled={currentPage >= (inactivosData.pages || 1)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Modal resultado importación */}
+      <Modal
+        open={importResult !== null}
+        onClose={() => setImportResult(null)}
+        title="Resultado de importación"
+      >
+        {importResult && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-success-50 border border-success-100 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-success-700">{importResult.creados}</p>
+                <p className="text-xs text-success-600 font-semibold mt-1">Creados</p>
+              </div>
+              <div className="bg-warning-50 border border-warning-100 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-warning-700">{importResult.omitidos}</p>
+                <p className="text-xs text-warning-600 font-semibold mt-1">Omitidos (ya existen)</p>
+              </div>
+              <div className="bg-danger-50 border border-danger-100 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-danger-700">{importResult.errores.length}</p>
+                <p className="text-xs text-danger-600 font-semibold mt-1">Con error</p>
+              </div>
+            </div>
+
+            {importResult.errores.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-surface-700 mb-2">Detalle de errores:</p>
+                <div className="bg-surface-50 rounded-xl border border-surface-200 overflow-hidden max-h-48 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-surface-100 border-b border-surface-200">
+                        <th className="text-left px-3 py-2 font-bold text-surface-500">Fila</th>
+                        <th className="text-left px-3 py-2 font-bold text-surface-500">Nombre</th>
+                        <th className="text-left px-3 py-2 font-bold text-surface-500">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importResult.errores.map((e, i) => (
+                        <tr key={i} className="border-b border-surface-100 last:border-0">
+                          <td className="px-3 py-2 text-surface-500">{e.fila}</td>
+                          <td className="px-3 py-2 font-semibold text-surface-700">{e.nombre || "—"}</td>
+                          <td className="px-3 py-2 text-danger-600">{e.motivo}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {importResult.creados > 0 && importResult.errores.length === 0 && (
+              <p className="text-sm text-success-600 font-semibold text-center">
+                ✓ Todos los productos se importaron correctamente
+              </p>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-surface-100">
               <button
-                onClick={() => setCurrentPage((p) => p + 1)}
-                disabled={currentPage >= (currentData.pages || 1)}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-200 hover:bg-surface-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                onClick={() => setImportResult(null)}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 transition cursor-pointer"
               >
-                Siguiente →
+                Cerrar
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {/* Modal */}
+      {/* Modal CRUD */}
       <Modal
         open={modalOpen}
         onClose={closeModal}
@@ -617,7 +881,7 @@ export default function ProductosPage() {
               </label>
               <button
                 type="button"
-                onClick={addInsumo}
+                onClick={() => setSelectorOpen(true)}
                 className="text-brand-600 hover:text-brand-800 text-xs font-bold cursor-pointer flex items-center gap-1 bg-brand-50 px-3 py-1.5 rounded-lg hover:bg-brand-100 transition"
               >
                 + Agregar

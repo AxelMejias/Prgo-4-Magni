@@ -35,6 +35,7 @@ export default function IngredientesPage() {
     size: PAGE_SIZE,
     nombre: nombreParam || undefined,
     es_alergeno: esAlergeno,
+    es_producto_terminado: esProductoTerminado,
   };
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,15 +48,8 @@ export default function IngredientesPage() {
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["ingredientes", filters, esProductoTerminado],
-    queryFn: async () => {
-      const result = await ingredienteApi.getAll(filters);
-      if (esProductoTerminado === undefined) return result;
-      return {
-        ...result,
-        items: result.items.filter((i) => i.es_producto_terminado === esProductoTerminado),
-      };
-    },
+    queryKey: ["ingredientes", filters],
+    queryFn: () => ingredienteApi.getAll(filters),
     enabled: tab === "activos",
   });
 
