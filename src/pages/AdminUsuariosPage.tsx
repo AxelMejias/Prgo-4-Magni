@@ -6,14 +6,14 @@ const PAGE_SIZE = 15;
 
 const ALL_ROLES = [
   { codigo: "ADMIN",   nombre: "Administrador" },
-  { codigo: "COCINERO", nombre: "Cocinero" },
+  { codigo: "PEDIDOS",  nombre: "Gestor de Pedidos" },
   { codigo: "STOCK",   nombre: "Gestor de Stock" },
   { codigo: "CLIENT",  nombre: "Cliente" },
 ];
 
 const ROLE_META: Record<string, { label: string; color: string }> = {
   ADMIN:   { label: "Admin",   color: "bg-red-100 text-red-700 border-red-200" },
-  COCINERO: { label: "Cocinero", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  PEDIDOS:  { label: "Gestor de Pedidos", color: "bg-purple-100 text-purple-700 border-purple-200" },
   STOCK:   { label: "Stock",   color: "bg-blue-100 text-blue-700 border-blue-200" },
   CLIENT:  { label: "Cliente", color: "bg-green-100 text-green-700 border-green-200" },
 };
@@ -21,7 +21,7 @@ const ROLE_META: Record<string, { label: string; color: string }> = {
 const FILTER_TABS = [
   { label: "Todos",    value: "" },
   { label: "Admin",    value: "ADMIN" },
-  { label: "Cocinero", value: "COCINERO" },
+  { label: "Pedidos",  value: "PEDIDOS" },
   { label: "Stock",    value: "STOCK" },
   { label: "Clientes", value: "CLIENT" },
 ];

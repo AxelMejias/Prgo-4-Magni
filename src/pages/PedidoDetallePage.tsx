@@ -18,7 +18,7 @@ export default function PedidoDetallePage() {
   const pedidoId = Number(id);
   const queryClient = useQueryClient();
   const hasRole = useAuthStore((s) => s.hasRole);
-  const esStaff = hasRole(["ADMIN", "COCINERO"]);
+  const esStaff = hasRole(["ADMIN", "PEDIDOS"]);
 
   const [motivoCancelar, setMotivoCancelar] = useState("");
   const [restaurarStock, setRestaurarStock] = useState(true);

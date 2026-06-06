@@ -62,8 +62,8 @@ export default function App() {
                 <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
               </Route>
 
-              {/* Admin Pedidos — solo ADMIN/COCINERO */}
-              <Route element={<ProtectedRoute allowedRoles={["ADMIN", "COCINERO"]} />}>
+              {/* Admin Pedidos — solo ADMIN/PEDIDOS */}
+              <Route element={<ProtectedRoute allowedRoles={["ADMIN", "PEDIDOS"]} />}>
                 <Route path="/admin/pedidos"     element={<AdminPedidosPage />} />
                 <Route path="/admin/pedidos/:id" element={<PedidoDetallePage />} />
               </Route>
