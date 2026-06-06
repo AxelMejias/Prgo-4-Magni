@@ -105,11 +105,15 @@ export const pedidoApi = {
   },
 
   /** CLIENT — cancela su propio pedido (solo PENDIENTE/CONFIRMADO). */
-  cancelar: async (id: number, motivo: string): Promise<Pedido> => {
+  cancelar: async (
+    id: number,
+    motivo: string,
+    restaurarStock: boolean = true
+  ): Promise<Pedido> => {
     try {
       const { data } = await axiosClient.post<Pedido>(
         `/api/v1/pedidos/${id}/cancelar`,
-        { motivo }
+        { motivo, restaurar_stock: restaurarStock }
       );
       return data;
     } catch (err) {

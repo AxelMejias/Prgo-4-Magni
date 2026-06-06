@@ -21,6 +21,7 @@ export default function PedidoDetallePage() {
   const esStaff = hasRole(["ADMIN", "COCINERO"]);
 
   const [motivoCancelar, setMotivoCancelar] = useState("");
+  const [restaurarStock, setRestaurarStock] = useState(true);
   const [error, setError] = useState("");
 
   // ── Queries
@@ -51,24 +52,29 @@ export default function PedidoDetallePage() {
     mutationFn: ({
       estado_hacia,
       motivo,
+      restaurar_stock,
     }: {
       estado_hacia: EstadoCodigo;
       motivo?: string;
-    }) => pedidoApi.avanzarEstado(pedidoId, { estado_hacia, motivo }),
+      restaurar_stock?: boolean;
+    }) => pedidoApi.avanzarEstado(pedidoId, { estado_hacia, motivo, restaurar_stock }),
     onSuccess: () => {
       invalidarPedido();
       setError("");
       setMotivoCancelar("");
+      setRestaurarStock(true);
     },
     onError: (err: Error) => setError(err.message),
   });
 
   const cancelarMutation = useMutation({
-    mutationFn: (motivo: string) => pedidoApi.cancelar(pedidoId, motivo),
+    mutationFn: ({ motivo, restaurarStock }: { motivo: string; restaurarStock: boolean }) =>
+      pedidoApi.cancelar(pedidoId, motivo, restaurarStock),
     onSuccess: () => {
       invalidarPedido();
       setError("");
       setMotivoCancelar("");
+      setRestaurarStock(true);
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -85,14 +91,14 @@ export default function PedidoDetallePage() {
         setError("Para cancelar es obligatorio indicar un motivo.");
         return;
       }
-      // CLIENT usa /cancelar, STAFF usa /avanzar
       if (esStaff) {
         avanzarMutation.mutate({
           estado_hacia: estado,
           motivo: motivoCancelar,
+          restaurar_stock: restaurarStock,
         });
       } else {
-        cancelarMutation.mutate(motivoCancelar);
+        cancelarMutation.mutate({ motivo: motivoCancelar, restaurarStock });
       }
     } else {
       avanzarMutation.mutate({ estado_hacia: estado });
@@ -198,19 +204,42 @@ export default function PedidoDetallePage() {
             {esStaff ? "Avanzar estado" : "Acciones"}
           </h2>
 
-          {/* Si entre los siguientes hay CANCELADO, mostrar input de motivo */}
+          {/* Si entre los siguientes hay CANCELADO, mostrar motivo + opción de stock */}
           {nextStates.includes("CANCELADO") && (
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-surface-700 mb-1">
-                Motivo (obligatorio para cancelar)
-              </label>
-              <input
-                type="text"
-                value={motivoCancelar}
-                onChange={(e) => setMotivoCancelar(e.target.value)}
-                placeholder="Ej: sin stock, cliente arrepentido…"
-                className="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+            <div className="mb-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-surface-700 mb-1">
+                  Motivo (obligatorio para cancelar)
+                </label>
+                <input
+                  type="text"
+                  value={motivoCancelar}
+                  onChange={(e) => setMotivoCancelar(e.target.value)}
+                  placeholder="Ej: sin stock, cliente arrepentido…"
+                  className="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              <div className={`rounded-xl border p-3 ${restaurarStock ? "bg-success-50 border-success-200" : "bg-warning-50 border-warning-200"}`}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={restaurarStock}
+                    onChange={(e) => setRestaurarStock(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded accent-brand-600 shrink-0"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-surface-800">
+                      Restaurar stock de insumos
+                    </p>
+                    <p className="text-xs text-surface-500 mt-0.5">
+                      {restaurarStock
+                        ? "Se devolverá el stock de los ingredientes usados en este pedido."
+                        : "El stock NO se devolverá (usalo cuando los ingredientes ya fueron consumidos en elaboración)."}
+                    </p>
+                  </div>
+                </label>
+              </div>
             </div>
           )}
 

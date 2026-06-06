@@ -36,10 +36,12 @@ export interface PedidoCreate {
 export interface AvanzarEstadoRequest {
   estado_hacia: EstadoCodigo;
   motivo?: string | null;             // obligatorio si estado_hacia=CANCELADO
+  restaurar_stock?: boolean;          // default true
 }
 
 export interface CancelarPedidoRequest {
   motivo: string;                     // min_length=1
+  restaurar_stock?: boolean;          // default true
 }
 
 // ─── Response schemas ───────────────────────────────────────────────────────
