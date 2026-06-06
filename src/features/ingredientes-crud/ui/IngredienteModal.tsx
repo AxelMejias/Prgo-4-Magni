@@ -9,6 +9,7 @@ interface IngredienteModalProps {
   onSubmit: (data: IngredienteCreate) => void;
   isSaving: boolean;
   error: string;
+  stockOnly?: boolean;
 }
 
 const EMPTY: IngredienteCreate = {
@@ -29,6 +30,7 @@ export default function IngredienteModal({
   onSubmit,
   isSaving,
   error,
+  stockOnly = false,
 }: IngredienteModalProps) {
   const [form, setForm] = useState<IngredienteCreate>(EMPTY);
   const [costoStr, setCostoStr] = useState("");
@@ -86,7 +88,8 @@ export default function IngredienteModal({
             value={form.nombre}
             onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
             maxLength={100}
-            className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+            disabled={stockOnly}
+            className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition disabled:bg-surface-100 disabled:opacity-60 disabled:cursor-not-allowed bg-white"
             placeholder="Ej: Harina de trigo"
           />
         </div>
@@ -101,7 +104,8 @@ export default function IngredienteModal({
             onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
             maxLength={500}
             rows={2}
-            className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white resize-none"
+            disabled={stockOnly}
+            className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition disabled:bg-surface-100 disabled:opacity-60 disabled:cursor-not-allowed bg-white resize-none"
             placeholder="Descripción opcional..."
           />
         </div>
@@ -116,7 +120,8 @@ export default function IngredienteModal({
             value={form.unidad_medida}
             onChange={(e) => setForm((f) => ({ ...f, unidad_medida: e.target.value }))}
             maxLength={50}
-            className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+            disabled={stockOnly}
+            className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition disabled:bg-surface-100 disabled:opacity-60 disabled:cursor-not-allowed bg-white"
             placeholder="Ej: kg, lt, unidades"
           />
         </div>
@@ -181,29 +186,31 @@ export default function IngredienteModal({
 
         {/* Checkboxes */}
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${stockOnly ? "opacity-50" : ""}`}>
             <input
               id="es_alergeno"
               type="checkbox"
               checked={form.es_alergeno}
               onChange={(e) => setForm((f) => ({ ...f, es_alergeno: e.target.checked }))}
-              className="w-4 h-4 accent-orange-500 cursor-pointer"
+              disabled={stockOnly}
+              className="w-4 h-4 accent-orange-500 cursor-pointer disabled:cursor-not-allowed"
             />
-            <label htmlFor="es_alergeno" className="text-sm font-semibold text-surface-700 cursor-pointer">
+            <label htmlFor="es_alergeno" className={`text-sm font-semibold text-surface-700 ${stockOnly ? "" : "cursor-pointer"}`}>
               Es alérgeno{" "}
               <span className="text-xs font-normal text-orange-500">(Reg. UE 1169/2011)</span>
             </label>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${stockOnly ? "opacity-50" : ""}`}>
             <input
               id="es_producto_terminado"
               type="checkbox"
               checked={form.es_producto_terminado}
               onChange={(e) => setForm((f) => ({ ...f, es_producto_terminado: e.target.checked }))}
-              className="w-4 h-4 accent-brand-500 cursor-pointer"
+              disabled={stockOnly}
+              className="w-4 h-4 accent-brand-500 cursor-pointer disabled:cursor-not-allowed"
             />
-            <label htmlFor="es_producto_terminado" className="text-sm font-semibold text-surface-700 cursor-pointer">
+            <label htmlFor="es_producto_terminado" className={`text-sm font-semibold text-surface-700 ${stockOnly ? "" : "cursor-pointer"}`}>
               Es producto terminado{" "}
               <span className="text-xs font-normal text-surface-400">(ej: Coca-Cola)</span>
             </label>

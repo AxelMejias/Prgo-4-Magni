@@ -525,6 +525,7 @@ export default function IngredientesPage() {
         onSubmit={handleSubmit}
         isSaving={isSaving}
         error={modalError}
+        stockOnly={!canManage}
       />
     </div>
   );
