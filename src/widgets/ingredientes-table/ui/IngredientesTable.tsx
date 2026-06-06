@@ -6,6 +6,7 @@ interface IngredientesTableProps {
   onDelete: (ing: Ingrediente) => void;
   onPageChange: (page: number) => void;
   isDeleting: boolean;
+  canManage?: boolean;
 }
 
 function formatARS(n: number) {
@@ -18,6 +19,7 @@ export default function IngredientesTable({
   onDelete,
   onPageChange,
   isDeleting,
+  canManage = false,
 }: IngredientesTableProps) {
   const { items, total, page, size, pages } = data;
 
@@ -129,7 +131,7 @@ export default function IngredientesTable({
                 {/* Acciones */}
                 <td className="px-4 py-3.5">
                   <div className="flex items-center justify-center gap-2">
-                    {!isDeleted && (
+                    {!isDeleted && canManage && (
                       <>
                         <button
                           onClick={() => onEdit(ing)}

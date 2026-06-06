@@ -310,6 +310,7 @@ export default function IngredientesPage() {
               onDelete={handleDelete}
               onPageChange={setPage}
               isDeleting={deleteMutation.isPending}
+              canManage={canManage}
             />
           )}
         </>
