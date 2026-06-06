@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { productosApi } from "../services/api";
 import type { ProductoListItem } from "../types";
 import { useCartStore } from "../features/cart/model/cartStore";
+import { useAuthStore } from "../shared/store/authStore";
 import { formatARS, toNumber } from "../shared/lib/format";
 
 const PAGE_SIZE = 8;
@@ -18,6 +19,7 @@ export default function HomeStorePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
+  const canBuy  = useAuthStore((s) => s.hasRole(["CLIENT"]));
 
   function showToast(nombre: string) {
     setToast(nombre);
@@ -165,12 +167,14 @@ export default function HomeStorePage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
-                    <button
-                      onClick={(e) => handleAdd(p, e)}
-                      className="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition-colors"
-                    >
-                      Agregar
-                    </button>
+                    {canBuy && (
+                      <button
+                        onClick={(e) => handleAdd(p, e)}
+                        className="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition-colors"
+                      >
+                        Agregar
+                      </button>
+                    )}
                   </div>
                 </article>
               ))
@@ -314,12 +318,14 @@ export default function HomeStorePage() {
                   )}
 
                   {/* Botón agregar */}
-                  <button
-                    onClick={handleAddFromDetail}
-                    className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-colors"
-                  >
-                    Agregar al carrito — {formatARS(detail.precio)}
-                  </button>
+                  {canBuy && (
+                    <button
+                      onClick={handleAddFromDetail}
+                      className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-colors"
+                    >
+                      Agregar al carrito — {formatARS(detail.precio)}
+                    </button>
+                  )}
                 </div>
               </>
             ) : null}
