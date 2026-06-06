@@ -233,7 +233,7 @@ export default function IngredientesPage() {
             </p>
           </div>
         </div>
-        {tab === "activos" && (
+        {tab === "activos" && canManage && (
           <button
             onClick={openCreate}
             className="bg-success-500 hover:bg-success-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer flex items-center gap-2"
