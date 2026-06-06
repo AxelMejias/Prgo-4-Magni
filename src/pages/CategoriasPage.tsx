@@ -134,6 +134,7 @@ export default function CategoriasPage() {
   const [editing, setEditing] = useState<Categoria | null>(null);
   const [form, setForm] = useState<CategoriaInput>({ nombre: "", descripcion: "", parent_id: null });
   const [error, setError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
   const { data: tree, isLoading, isError } = useQuery({
@@ -166,8 +167,8 @@ export default function CategoriasPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => categoriasApi.delete(id),
-    onSuccess: invalidate,
-    onError: (err: Error) => alert(err.message),
+    onSuccess: () => { setDeleteError(""); invalidate(); },
+    onError: (err: Error) => setDeleteError(err.message),
   });
 
   function openCreate(parent_id: number | null = null) {
@@ -214,6 +215,7 @@ export default function CategoriasPage() {
   }
 
   function handleDelete(c: Categoria) {
+    setDeleteError("");
     if (window.confirm(`¿Eliminar "${c.nombre}"?`)) {
       deleteMutation.mutate(c.id);
     }
@@ -261,6 +263,14 @@ export default function CategoriasPage() {
 
       {isLoading && <p className="text-surface-500">Cargando…</p>}
       {isError && <p className="text-danger-600">Error al cargar categorías.</p>}
+
+      {deleteError && (
+        <div className="flex items-start gap-3 bg-danger-50 border border-danger-200 rounded-xl px-4 py-3 text-sm text-danger-700">
+          <span className="shrink-0 mt-0.5">⚠️</span>
+          <span className="flex-1">{deleteError}</span>
+          <button onClick={() => setDeleteError("")} className="shrink-0 text-danger-400 hover:text-danger-600">✕</button>
+        </div>
+      )}
 
       {tree && (
         <ul className="space-y-3">
