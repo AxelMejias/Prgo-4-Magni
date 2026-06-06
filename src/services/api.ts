@@ -204,6 +204,13 @@ export const productosApi = {
   create: (data: ProductoCreate) => post<ProductoDetalle>("/api/v1/productos/", data),
   update: (id: number, data: ProductoUpdate) =>
     put<ProductoDetalle>(`/api/v1/productos/${id}`, data),
+  toggleDisponibilidad: (id: number, disponible: boolean) =>
+    fetch(`${BASE}/api/v1/productos/${id}/disponibilidad`, {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ disponible }),
+    }).then((r) => handleResponse<ProductoDetalle>(r)),
   delete: (id: number) => del(`/api/v1/productos/${id}`),
 
   getInactivos: (page = 1, size = 20) =>

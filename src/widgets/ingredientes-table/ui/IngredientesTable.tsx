@@ -6,7 +6,8 @@ interface IngredientesTableProps {
   onDelete: (ing: Ingrediente) => void;
   onPageChange: (page: number) => void;
   isDeleting: boolean;
-  canManage?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 function formatARS(n: number) {
@@ -19,7 +20,8 @@ export default function IngredientesTable({
   onDelete,
   onPageChange,
   isDeleting,
-  canManage = false,
+  canEdit = false,
+  canDelete = false,
 }: IngredientesTableProps) {
   const { items, total, page, size, pages } = data;
 
@@ -131,22 +133,22 @@ export default function IngredientesTable({
                 {/* Acciones */}
                 <td className="px-4 py-3.5">
                   <div className="flex items-center justify-center gap-2">
-                    {!isDeleted && canManage && (
-                      <>
-                        <button
-                          onClick={() => onEdit(ing)}
-                          className="p-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all text-xs font-semibold cursor-pointer"
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          onClick={() => onDelete(ing)}
-                          disabled={isDeleting}
-                          className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 disabled:opacity-50 transition-all text-xs font-semibold cursor-pointer"
-                        >
-                          🗑️ Eliminar
-                        </button>
-                      </>
+                    {!isDeleted && canEdit && (
+                      <button
+                        onClick={() => onEdit(ing)}
+                        className="p-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all text-xs font-semibold cursor-pointer"
+                      >
+                        ✏️ Editar
+                      </button>
+                    )}
+                    {!isDeleted && canDelete && (
+                      <button
+                        onClick={() => onDelete(ing)}
+                        disabled={isDeleting}
+                        className="p-2 rounded-lg bg-danger-50 text-danger-600 hover:bg-danger-100 disabled:opacity-50 transition-all text-xs font-semibold cursor-pointer"
+                      >
+                        🗑️ Eliminar
+                      </button>
                     )}
                   </div>
                 </td>

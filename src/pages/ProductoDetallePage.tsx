@@ -26,7 +26,7 @@ export default function ProductoDetallePage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: { disponible: boolean }) =>
-      productosApi.update(Number(id), payload),
+      productosApi.toggleDisponibilidad(Number(id), payload.disponible),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["productos", id] });
       setSaved(true);

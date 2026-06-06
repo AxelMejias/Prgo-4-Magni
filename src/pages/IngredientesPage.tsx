@@ -16,6 +16,7 @@ const PAGE_SIZE = 5;
 export default function IngredientesPage() {
   const queryClient = useQueryClient();
   const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
+  const canEdit   = useAuthStore((s) => s.hasRole(["ADMIN", "STOCK"]));
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get("tab") as Tab) ?? "activos";
@@ -310,7 +311,8 @@ export default function IngredientesPage() {
               onDelete={handleDelete}
               onPageChange={setPage}
               isDeleting={deleteMutation.isPending}
-              canManage={canManage}
+              canEdit={canEdit}
+              canDelete={canManage}
             />
           )}
         </>
