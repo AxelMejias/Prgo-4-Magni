@@ -2,6 +2,7 @@ import type { EstadoCodigo } from "../../../entities/pedido/model";
 import { ESTADO_LABELS } from "../lib/fsm";
 
 const STYLES: Record<EstadoCodigo, string> = {
+  ESPERANDO_PAGO: "bg-surface-100 text-surface-500 ring-surface-400/20",
   PENDIENTE:  "bg-warning-100 text-warning-600 ring-warning-500/20",
   CONFIRMADO: "bg-brand-100 text-brand-700 ring-brand-500/20",
   EN_PREP:    "bg-purple-100 text-purple-700 ring-purple-500/20",

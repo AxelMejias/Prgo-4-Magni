@@ -1,4 +1,5 @@
 export type EstadoCodigo =
+  | "ESPERANDO_PAGO"
   | "PENDIENTE"
   | "CONFIRMADO"
   | "EN_PREP"

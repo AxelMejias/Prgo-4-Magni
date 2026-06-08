@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useCartStore } from "../features/cart/model/cartStore";
 import { pedidoApi } from "../entities/pedido/api";
 
-const REDIRECT_SECONDS = 5;
+const REDIRECT_SECONDS = 2;
 
 export default function PedidoExitosoPage() {
   const [params] = useSearchParams();
