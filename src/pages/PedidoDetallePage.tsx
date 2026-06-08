@@ -134,7 +134,7 @@ export default function PedidoDetallePage() {
 
   return (
     <>
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
       <Link
         to={esStaff ? "/admin/pedidos" : "/mis-pedidos"}
         className="text-sm text-brand-600 hover:underline"

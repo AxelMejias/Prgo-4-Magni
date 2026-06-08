@@ -31,7 +31,7 @@ export default function CarritoPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-surface-900">Mi carrito</h1>
         <button

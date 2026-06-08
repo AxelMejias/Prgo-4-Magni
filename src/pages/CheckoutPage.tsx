@@ -125,7 +125,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-surface-900">Confirmar Pedido</h1>
         <p className="text-sm text-surface-500">
