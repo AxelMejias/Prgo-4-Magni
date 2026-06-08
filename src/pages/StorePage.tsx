@@ -26,7 +26,7 @@ const FEATURES = [
 
 function tieneStock(insumos: ProductoListItem["insumos"]): boolean {
   if (insumos.length === 0) return true;
-  return insumos.every((ins) => ins.stock_actual >= ins.cantidad);
+  return insumos.every((ins) => toNumber(ins.stock_actual) >= toNumber(ins.cantidad));
 }
 
 function StockBadge({ insumos }: { insumos: ProductoListItem["insumos"] }) {
@@ -617,7 +617,7 @@ export default function StorePage() {
                       </p>
                       <div className="bg-surface-50 rounded-xl overflow-hidden border border-surface-100">
                         {detail.insumos.map((ins, i) => {
-                          const sinStock = ins.stock_actual < ins.cantidad;
+                          const sinStock = toNumber(ins.stock_actual) < toNumber(ins.cantidad);
                           return (
                             <div
                               key={ins.ingrediente_id}
