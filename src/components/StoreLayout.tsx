@@ -32,7 +32,11 @@ export default function StoreLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
 
           {/* Logo */}
-          <Link to="/store" className="flex items-center gap-2.5 shrink-0 mr-2">
+          <Link
+            to="/store"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="flex items-center gap-2.5 shrink-0 mr-2"
+          >
             <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center shadow-sm shadow-brand-500/30">
               <span className="text-white font-bold text-xs">FS</span>
             </div>

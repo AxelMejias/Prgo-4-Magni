@@ -24,6 +24,26 @@ const FEATURES = [
   { icon: "💳", title: "Pagá como quieras",    desc: "Efectivo, transferencia bancaria o MercadoPago. Vos elegís cómo abonar." },
 ];
 
+function tieneStock(insumos: ProductoListItem["insumos"]): boolean {
+  if (insumos.length === 0) return true;
+  return insumos.every((ins) => ins.stock_actual >= ins.cantidad);
+}
+
+function StockBadge({ insumos }: { insumos: ProductoListItem["insumos"] }) {
+  const ok = tieneStock(insumos);
+  return (
+    <span
+      className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full leading-tight ${
+        ok
+          ? "bg-success-100 text-success-700"
+          : "bg-danger-100 text-danger-600"
+      }`}
+    >
+      {ok ? "En stock" : "Sin stock"}
+    </span>
+  );
+}
+
 export default function StorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage    = parseInt(searchParams.get("page")      ?? "1", 10);
@@ -276,10 +296,11 @@ export default function StorePage() {
                       onClick={() => openDetail(p.id)}
                       className="bg-white rounded-2xl border border-surface-200 p-4 flex flex-col gap-3 hover:shadow-md hover:border-brand-300 transition-all cursor-pointer"
                     >
-                      <div className="aspect-[4/3] bg-white rounded-xl overflow-hidden flex items-center justify-center text-4xl">
+                      <div className="aspect-[4/3] bg-white rounded-xl overflow-hidden flex items-center justify-center text-4xl relative">
                         {p.image_url ? (
                           <img src={p.image_url} alt={p.nombre} className="max-w-full max-h-full object-contain" />
                         ) : "🍔"}
+                        <StockBadge insumos={p.insumos} />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-surface-900 line-clamp-1">{p.nombre}</h3>
@@ -435,10 +456,11 @@ export default function StorePage() {
                     onClick={() => openDetail(p.id)}
                     className="bg-white rounded-2xl border border-surface-200 p-4 flex flex-col gap-3 hover:shadow-md hover:border-brand-300 transition-all cursor-pointer"
                   >
-                    <div className="aspect-[4/3] bg-white rounded-xl overflow-hidden flex items-center justify-center text-4xl">
+                    <div className="aspect-[4/3] bg-white rounded-xl overflow-hidden flex items-center justify-center text-4xl relative">
                       {p.image_url ? (
                         <img src={p.image_url} alt={p.nombre} className="max-w-full max-h-full object-contain" />
                       ) : "🍔"}
+                      <StockBadge insumos={p.insumos} />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-surface-900 line-clamp-1">{p.nombre}</h3>
@@ -455,8 +477,16 @@ export default function StorePage() {
                       <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
                       {canBuy && (
                         <button
-                          onClick={(e) => handleAdd(p, e)}
-                          className="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition-colors"
+                          onClick={(e) => {
+                            if (!tieneStock(p.insumos)) { e.stopPropagation(); return; }
+                            handleAdd(p, e);
+                          }}
+                          disabled={!tieneStock(p.insumos)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                            tieneStock(p.insumos)
+                              ? "bg-brand-600 text-white hover:bg-brand-700 cursor-pointer"
+                              : "bg-surface-100 text-surface-400 cursor-not-allowed"
+                          }`}
                         >
                           Agregar
                         </button>
@@ -549,9 +579,12 @@ export default function StorePage() {
                 <div className="p-6 space-y-5 bg-surface-50 rounded-b-2xl">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-xl font-bold text-surface-900">{detail.nombre}</h2>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="text-xl font-bold text-surface-900">{detail.nombre}</h2>
+                        <StockBadge insumos={detail.insumos} />
+                      </div>
                       {detail.descripcion && (
-                        <p className="text-sm text-surface-500 mt-1">{detail.descripcion}</p>
+                        <p className="text-sm text-surface-500">{detail.descripcion}</p>
                       )}
                     </div>
                     <span className="text-2xl font-bold text-brand-700 whitespace-nowrap">
@@ -583,19 +616,25 @@ export default function StorePage() {
                         Ingredientes
                       </p>
                       <div className="bg-surface-50 rounded-xl overflow-hidden border border-surface-100">
-                        {detail.insumos.map((ins, i) => (
-                          <div
-                            key={ins.ingrediente_id}
-                            className={`flex items-center justify-between px-4 py-2.5 border-b border-surface-100 last:border-0 ${
-                              i % 2 === 0 ? "bg-white" : "bg-surface-50"
-                            }`}
-                          >
-                            <span className="text-sm text-surface-700">{ins.nombre}</span>
-                            <span className="text-xs font-bold text-surface-500 bg-surface-100 px-2 py-0.5 rounded-md">
-                              {ins.cantidad} {ins.unidad_medida}
-                            </span>
-                          </div>
-                        ))}
+                        {detail.insumos.map((ins, i) => {
+                          const sinStock = ins.stock_actual < ins.cantidad;
+                          return (
+                            <div
+                              key={ins.ingrediente_id}
+                              className={`flex items-center justify-between px-4 py-2.5 border-b border-surface-100 last:border-0 ${
+                                i % 2 === 0 ? "bg-white" : "bg-surface-50"
+                              }`}
+                            >
+                              <span className={`text-sm ${sinStock ? "text-danger-600 font-semibold" : "text-surface-700"}`}>
+                                {ins.nombre}
+                                {sinStock && <span className="ml-1.5 text-[10px] font-bold text-danger-500">⚠ sin stock</span>}
+                              </span>
+                              <span className="text-xs font-bold text-surface-500 bg-surface-100 px-2 py-0.5 rounded-md">
+                                {ins.cantidad} {ins.unidad_medida}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -603,9 +642,16 @@ export default function StorePage() {
                   {canBuy && (
                     <button
                       onClick={handleAddFromDetail}
-                      className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-colors"
+                      disabled={!tieneStock(detail.insumos)}
+                      className={`w-full py-3 rounded-xl font-semibold transition-colors ${
+                        tieneStock(detail.insumos)
+                          ? "bg-brand-600 text-white hover:bg-brand-700 cursor-pointer"
+                          : "bg-surface-100 text-surface-400 cursor-not-allowed"
+                      }`}
                     >
-                      Agregar al carrito — {formatARS(detail.precio)}
+                      {tieneStock(detail.insumos)
+                        ? `Agregar al carrito — ${formatARS(detail.precio)}`
+                        : "Sin stock disponible"}
                     </button>
                   )}
                 </div>
