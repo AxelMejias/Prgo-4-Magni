@@ -28,8 +28,6 @@ import PedidoExitosoPage from "./pages/PedidoExitosoPage";
 // Admin Pedidos (Staff)
 import AdminPedidosPage from "./pages/AdminPedidosPage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
-import MpCheckoutRedirectPage from "./pages/MpCheckoutRedirectPage";
-
 function SmartRedirect() {
   const hasRole = useAuthStore((s) => s.hasRole);
   if (hasRole(["ADMIN", "STOCK"])) return <Navigate to="/productos" replace />;
@@ -55,8 +53,6 @@ export default function App() {
           <Route path="/login"            element={<LoginPage />} />
           <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
           <Route path="/reset-password"   element={<ResetPasswordPage />} />
-          <Route path="/mp-checkout-redirect" element={<MpCheckoutRedirectPage />} />
-
           {/* ── Protegidas ────────────────────────────────────── */}
           <Route element={<ProtectedRoute />}>
 

@@ -20,42 +20,21 @@ export default function PedidoExitosoPage() {
 
   const redirectTarget = pedidoId ? `/mis-pedidos/${pedidoId}` : "/mis-pedidos";
 
-  // Detectar si estamos dentro del popup abierto por CheckoutPage.
-  // Usamos sessionStorage (sobrevive navegaciones dentro de la misma pestaña)
-  // porque window.opener puede ser nulificado por COOP cuando el popup pasa por MP.
-  const [isPopup] = useState(() => sessionStorage.getItem("mp_popup") === "1");
-
+  // Limpiar carrito al llegar con pago aprobado (por si quedó algo)
   useEffect(() => {
-    if (!isPopup) return;
-    // Limpiar la marca y señalar al main window para que detecte el resultado
-    sessionStorage.removeItem("mp_popup");
-    localStorage.setItem(
-      "mp_pago_resultado",
-      JSON.stringify({
-        pedido_id: pedidoId ? parseInt(pedidoId) : null,
-        status: mpStatus,
-        payment_id: paymentId ? parseInt(paymentId) : null,
-      })
-    );
-    window.close();
+    if (isApproved) clearCart();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Redirect automático tras countdown (no para failure — el usuario decide)
   useEffect(() => {
-    if (isApproved && !isPopup) clearCart();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (isFailure || isPopup) return;
+    if (isFailure) return;
     if (countdown <= 0) {
-      navigate(redirectTarget);
+      navigate(isApproved ? redirectTarget : "/mis-pedidos");
       return;
     }
     const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
     return () => clearInterval(timer);
-  }, [countdown, navigate, isFailure, isPopup, redirectTarget]);
-
-  // No renderizar nada en el popup — se está cerrando
-  if (isPopup) return null;
+  }, [countdown, navigate, isFailure, isApproved, redirectTarget]);
 
   if (isApproved) {
     return (
@@ -98,7 +77,7 @@ export default function PedidoExitosoPage() {
             Mis pedidos
           </button>
           <button
-            onClick={() => navigate("/tienda")}
+            onClick={() => navigate("/store")}
             className="px-6 py-2.5 rounded-xl border border-surface-300 text-surface-700 font-semibold hover:bg-surface-50 transition-colors"
           >
             Ir a la tienda
@@ -140,7 +119,7 @@ export default function PedidoExitosoPage() {
             Ver mis pedidos
           </button>
           <button
-            onClick={() => navigate("/tienda")}
+            onClick={() => navigate("/store")}
             className="px-6 py-2.5 rounded-xl border border-surface-300 text-surface-700 font-semibold hover:bg-surface-50 transition-colors"
           >
             Ir a la tienda
@@ -150,31 +129,28 @@ export default function PedidoExitosoPage() {
     );
   }
 
+  // Failure: el pedido fue auto-cancelado por el backend
   return (
     <div className="max-w-lg mx-auto text-center py-16 space-y-6">
       <div className="text-7xl">❌</div>
       <div>
         <h1 className="text-2xl font-bold text-surface-900">Pago no completado</h1>
-        {pedidoId && (
-          <p className="text-surface-500 mt-1 text-sm">Pedido #{pedidoId}</p>
-        )}
       </div>
       <p className="text-surface-600 text-sm">
-        El pago no fue procesado. Tu pedido está guardado — podés cancelarlo
-        o intentar pagar nuevamente desde <strong>Mis pedidos</strong>.
+        El pago fue cancelado o rechazado. No se realizó ningún cargo ni se creó ningún pedido.
       </p>
       <div className="flex gap-3 justify-center">
         <button
-          onClick={() => navigate(redirectTarget)}
+          onClick={() => navigate("/store")}
           className="px-6 py-2.5 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-colors"
         >
-          Ver mi pedido
+          Volver a la tienda
         </button>
         <button
-          onClick={() => navigate("/tienda")}
+          onClick={() => navigate("/carrito")}
           className="px-6 py-2.5 rounded-xl border border-surface-300 text-surface-700 font-semibold hover:bg-surface-50 transition-colors"
         >
-          Volver a la tienda
+          Ver carrito
         </button>
       </div>
     </div>
