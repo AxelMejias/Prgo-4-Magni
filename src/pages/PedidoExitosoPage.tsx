@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useCartStore } from "../features/cart/model/cartStore";
+import { useUiStore } from "../shared/store/uiStore";
 import { pedidoApi } from "../entities/pedido/api";
 
 export default function PedidoExitosoPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const clearCart = useCartStore((s) => s.clear);
+  const showPaymentOverlay = useUiStore((s) => s.showPaymentOverlay);
   const confirmedRef = useRef(false);
 
   const mpStatus = params.get("collection_status") ?? params.get("status") ?? "approved";
@@ -17,18 +19,15 @@ export default function PedidoExitosoPage() {
   const isPending  = mpStatus === "pending" || mpStatus === "in_process";
   const isFailure  = !isApproved && !isPending;
 
-  // Approved: confirmar pago en background y navegar de una al comprobante.
-  // PedidoDetallePage recibe el flag paymentApproved y muestra el overlay.
+  // Approved: activar overlay en StoreLayout ANTES de navegar, así no hay flash.
   useEffect(() => {
     if (!isApproved || confirmedRef.current) return;
     confirmedRef.current = true;
     clearCart();
     if (pedidoId) {
+      showPaymentOverlay(paymentId ?? undefined);
       pedidoApi.confirmarPagoMp(Number(pedidoId)).catch(() => {});
-      navigate(`/mis-pedidos/${pedidoId}`, {
-        replace: true,
-        state: { paymentApproved: true, paymentId },
-      });
+      navigate(`/mis-pedidos/${pedidoId}`, { replace: true });
     } else {
       navigate("/mis-pedidos", { replace: true });
     }

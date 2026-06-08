@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { pedidoApi } from "../entities/pedido/api";
 import type { EstadoCodigo } from "../entities/pedido/model";
 import { useAuthStore } from "../shared/store/authStore";
@@ -17,24 +17,10 @@ import { formatARS, formatDateTime, toNumber } from "../shared/lib/format";
 export default function PedidoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const pedidoId = Number(id);
-  const location = useLocation();
   const queryClient    = useQueryClient();
   const hasRole        = useAuthStore((s) => s.hasRole);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const esStaff = hasRole(["ADMIN", "PEDIDOS"]);
-
-  // Overlay "Pago aprobado" que se desvanece sobre el comprobante
-  const paymentApproved = (location.state as { paymentApproved?: boolean; paymentId?: string } | null)?.paymentApproved;
-  const paymentComprobante = (location.state as { paymentId?: string } | null)?.paymentId;
-  const [overlayMounted, setOverlayMounted] = useState(!!paymentApproved);
-  const [overlayVisible, setOverlayVisible] = useState(!!paymentApproved);
-
-  useEffect(() => {
-    if (!paymentApproved) return;
-    const fadeTimer   = setTimeout(() => setOverlayVisible(false), 1400);
-    const unmountTimer = setTimeout(() => setOverlayMounted(false), 2300);
-    return () => { clearTimeout(fadeTimer); clearTimeout(unmountTimer); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ref para subscribeToOrder (evita closure vicio en el callback de WS)
   const subscribeRef = useRef<(id: number) => void>(() => {});
@@ -148,22 +134,6 @@ export default function PedidoDetallePage() {
 
   return (
     <>
-      {/* Overlay "Pago aprobado" — se desvanece sobre el comprobante */}
-      {overlayMounted && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-white transition-opacity duration-[900ms] ${overlayVisible ? "opacity-100" : "opacity-0"}`}
-        >
-          <div className="text-center space-y-4 px-8">
-            <div className="text-8xl">✅</div>
-            <h1 className="text-3xl font-bold text-surface-900">¡Pago aprobado!</h1>
-            <p className="text-surface-600">Tu pedido fue confirmado y está siendo procesado.</p>
-            {paymentComprobante && (
-              <p className="text-xs text-surface-400">Comprobante MP: {paymentComprobante}</p>
-            )}
-          </div>
-        </div>
-      )}
-
     <div className="max-w-3xl mx-auto space-y-6">
       <Link
         to={esStaff ? "/admin/pedidos" : "/mis-pedidos"}

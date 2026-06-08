@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../shared/store/authStore";
 import { useCartStore } from "../features/cart/model/cartStore";
+import { useUiStore } from "../shared/store/uiStore";
 import { authApi } from "../shared/api/authApi";
 
 export default function StoreLayout() {
@@ -15,6 +17,33 @@ export default function StoreLayout() {
 
   const isClient = hasRole(["CLIENT"]);
 
+  // ── Overlay "Pago aprobado" ──────────────────────────────────────────────
+  // Vive en StoreLayout (siempre montado) para que esté visible ANTES de que
+  // PedidoDetallePage siquiera empiece a renderizar. Sin flash.
+  const paymentOverlay    = useUiStore((s) => s.paymentOverlay);
+  const clearPaymentOverlay = useUiStore((s) => s.clearPaymentOverlay);
+  const [overlayVisible, setOverlayVisible] = useState(false);
+  const [overlayMounted, setOverlayMounted] = useState(false);
+  const prevOverlay = useRef(paymentOverlay);
+
+  useEffect(() => {
+    if (paymentOverlay && !prevOverlay.current) {
+      // Nuevo trigger: montar + mostrar
+      setOverlayMounted(true);
+      setOverlayVisible(true);
+      const fadeTimer   = setTimeout(() => setOverlayVisible(false), 1400);
+      const unmountTimer = setTimeout(() => {
+        setOverlayMounted(false);
+        clearPaymentOverlay();
+      }, 2300);
+      prevOverlay.current = paymentOverlay;
+      return () => { clearTimeout(fadeTimer); clearTimeout(unmountTimer); };
+    }
+    if (!paymentOverlay) {
+      prevOverlay.current = null;
+    }
+  }, [paymentOverlay, clearPaymentOverlay]);
+
   async function handleLogout() {
     try {
       if (refreshToken) await authApi.logout(refreshToken);
@@ -24,7 +53,23 @@ export default function StoreLayout() {
     }
   }
 
+  const overlayPaymentId = paymentOverlay?.paymentId;
+
   return (
+    <>
+    {overlayMounted && createPortal(
+      <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-white transition-opacity duration-[900ms] ${overlayVisible ? "opacity-100" : "opacity-0"}`}>
+        <div className="text-center space-y-4 px-8">
+          <div className="text-8xl">✅</div>
+          <h1 className="text-3xl font-bold text-surface-900">¡Pago aprobado!</h1>
+          <p className="text-surface-600">Tu pedido fue confirmado y está siendo procesado.</p>
+          {overlayPaymentId && (
+            <p className="text-xs text-surface-400">Comprobante MP: {overlayPaymentId}</p>
+          )}
+        </div>
+      </div>,
+      document.body
+    )}
     <div className="min-h-screen flex flex-col bg-surface-50">
 
       {/* ── Header ──────────────────────────────────────────────── */}
@@ -161,5 +206,6 @@ export default function StoreLayout() {
       </main>
 
     </div>
+    </>
   );
 }
