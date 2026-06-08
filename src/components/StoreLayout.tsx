@@ -160,20 +160,6 @@ export default function StoreLayout() {
         <Outlet />
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────── */}
-      <footer className="bg-white border-t border-surface-200 py-8 text-center">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center">
-              <span className="text-white font-bold text-[10px]">FS</span>
-            </div>
-            <span className="font-bold text-surface-700 text-sm">Food Store</span>
-          </div>
-          <p className="text-xs text-surface-400">
-            © 2024 Food Store · Todos los derechos reservados
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
