@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, Link, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../shared/store/authStore";
 import { authApi } from "../shared/api/authApi";
 import CartIcon from "../widgets/cart-icon/ui/CartIcon";
@@ -6,6 +6,13 @@ import CartIcon from "../widgets/cart-icon/ui/CartIcon";
 // Cada item define qué roles pueden verlo. [] = todos los autenticados.
 const navItems = [
   // ── Store (todos los autenticados) ──────────────────────────────────
+  {
+    to: "/inicio",
+    label: "Inicio",
+    icon: "🏠",
+    color: "bg-brand-400",
+    roles: [],
+  },
   {
     to: "/tienda",
     label: "Tienda",
@@ -70,19 +77,6 @@ const navItems = [
   },
 ];
 
-const breadcrumbMap: Record<string, { label: string; path: string }> = {
-  tienda:           { label: "Tienda",          path: "/tienda" },
-  carrito:          { label: "Carrito",         path: "/carrito" },
-  checkout:         { label: "Checkout",        path: "/checkout" },
-  "mis-pedidos":    { label: "Mis pedidos",     path: "/mis-pedidos" },
-  "mis-direcciones": { label: "Mis direcciones", path: "/mis-direcciones" },
-  admin:            { label: "Admin",           path: "/admin/pedidos" },
-  pedidos:          { label: "Pedidos",         path: "/admin/pedidos" },
-  usuarios:         { label: "Usuarios",        path: "/admin/usuarios" },
-  categorias:       { label: "Categorías",      path: "/categorias" },
-  ingredientes:     { label: "Ingredientes",    path: "/ingredientes" },
-  productos:        { label: "Productos",       path: "/productos" },
-};
 
 const roleLabels: Record<string, { label: string; color: string }> = {
   ADMIN:   { label: "Admin",   color: "bg-red-100 text-red-700" },
@@ -92,7 +86,6 @@ const roleLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function Layout() {
-  const location  = useLocation();
   const navigate  = useNavigate();
   const user      = useAuthStore((s) => s.user);
   const hasRole   = useAuthStore((s) => s.hasRole);
@@ -106,19 +99,6 @@ export default function Layout() {
 
   // El carrito solo lo ve quien es CLIENT (ADMIN/STOCK/PEDIDOS no compran)
   const showCart = hasRole(["CLIENT"]);
-
-  // Breadcrumb
-  const segments = location.pathname.split("/").filter(Boolean);
-  const breadcrumbItems: { label: string; path?: string }[] = [];
-  segments.forEach((seg, i) => {
-    const mapped = breadcrumbMap[seg];
-    if (mapped) {
-      const isLast = i === segments.length - 1;
-      breadcrumbItems.push({ label: mapped.label, path: isLast ? undefined : mapped.path });
-    } else if (!isNaN(Number(seg))) {
-      breadcrumbItems.push({ label: `Detalle #${seg}` });
-    }
-  });
 
   async function handleLogout() {
     try {
@@ -220,26 +200,6 @@ export default function Layout() {
 
       {/* ─── Main content ────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar con breadcrumb */}
-        <header className="bg-white border-b border-surface-200 sticky top-0 z-30">
-          <div className="px-8 h-14 flex items-center">
-            <div className="flex items-center gap-2 text-sm">
-              {breadcrumbItems.map((item, i) => (
-                <span key={i} className="flex items-center gap-2">
-                  {i > 0 && <span className="text-surface-300">/</span>}
-                  {item.path ? (
-                    <Link to={item.path} className="text-surface-400 hover:text-brand-600 transition-colors">
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <span className="text-surface-800 font-medium">{item.label}</span>
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-        </header>
-
         {/* Contenido de página */}
         <main className="flex-1 p-8 animate-page">
           <Outlet />

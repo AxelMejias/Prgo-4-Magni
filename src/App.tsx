@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import Layout from "./components/Layout";
 import ProtectedRoute from "./shared/ui/ProtectedRoute";
+import { useAuthStore } from "./shared/store/authStore";
 
 import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -15,7 +16,8 @@ import ProductosPage from "./pages/ProductosPage";
 import ProductoDetallePage from "./pages/ProductoDetallePage";
 
 // Store (Cliente)
-import HomeStorePage from "./pages/HomeStorePage";
+import InicioPage from "./pages/InicioPage";
+import TiendaPage from "./pages/TiendaPage";
 import CarritoPage from "./pages/CarritoPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import MisPedidosPage from "./pages/MisPedidosPage";
@@ -27,6 +29,13 @@ import AdminPedidosPage from "./pages/AdminPedidosPage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 import PedidoExitosoPage from "./pages/PedidoExitosoPage";
 import MpCheckoutRedirectPage from "./pages/MpCheckoutRedirectPage";
+
+function SmartRedirect() {
+  const hasRole = useAuthStore((s) => s.hasRole);
+  if (hasRole(["ADMIN", "STOCK"])) return <Navigate to="/productos" replace />;
+  if (hasRole(["PEDIDOS"]))        return <Navigate to="/admin/pedidos" replace />;
+  return <Navigate to="/inicio" replace />;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,10 +65,11 @@ export default function App() {
           {/* ── Protegidas: autenticado ─────────────────────── */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route index element={<Navigate to="/tienda" replace />} />
+              <Route index element={<SmartRedirect />} />
 
               {/* Store — accesible por todos los autenticados */}
-              <Route path="/tienda"     element={<HomeStorePage />} />
+              <Route path="/inicio"     element={<InicioPage />} />
+              <Route path="/tienda"     element={<TiendaPage />} />
               <Route path="/carrito"    element={<CarritoPage />} />
               <Route path="/checkout"   element={<CheckoutPage />} />
               <Route path="/mis-pedidos"     element={<MisPedidosPage />} />

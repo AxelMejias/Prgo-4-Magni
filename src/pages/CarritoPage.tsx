@@ -50,8 +50,12 @@ export default function CarritoPage() {
             key={it.producto_id}
             className="bg-white rounded-2xl border border-surface-200 p-4 flex items-center gap-4"
           >
-            <div className="w-14 h-14 bg-brand-100 rounded-xl flex items-center justify-center text-2xl shrink-0">
-              🍔
+            <div className="w-14 h-14 bg-white border border-surface-100 rounded-xl flex items-center justify-center text-2xl shrink-0 overflow-hidden">
+              {it.image_url ? (
+                <img src={it.image_url} alt={it.nombre} className="w-full h-full object-contain" />
+              ) : (
+                <span>🍔</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-surface-900 truncate">
@@ -64,16 +68,28 @@ export default function CarritoPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => updateCantidad(it.producto_id, it.cantidad - 1)}
-                className="w-7 h-7 rounded-lg border border-surface-300 text-surface-700 hover:bg-surface-100"
+                disabled={it.cantidad <= 1}
+                className={`w-7 h-7 rounded-lg border text-sm font-bold transition-colors ${
+                  it.cantidad <= 1
+                    ? "border-surface-200 text-surface-300 cursor-not-allowed"
+                    : "border-surface-300 text-surface-700 hover:bg-surface-100 cursor-pointer"
+                }`}
               >
                 −
               </button>
-              <span className="w-6 text-center text-sm font-semibold">
-                {it.cantidad}
-              </span>
+              <input
+                type="number"
+                min={1}
+                value={it.cantidad}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 1) updateCantidad(it.producto_id, val);
+                }}
+                className="w-10 text-center text-sm font-semibold border border-surface-200 rounded-lg py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
               <button
                 onClick={() => updateCantidad(it.producto_id, it.cantidad + 1)}
-                className="w-7 h-7 rounded-lg border border-surface-300 text-surface-700 hover:bg-surface-100"
+                className="w-7 h-7 rounded-lg border border-surface-300 text-surface-700 hover:bg-surface-100 cursor-pointer"
               >
                 +
               </button>
@@ -82,8 +98,10 @@ export default function CarritoPage() {
               {formatARS(it.precio * it.cantidad)}
             </div>
             <button
-              onClick={() => removeItem(it.producto_id)}
-              className="text-danger-500 hover:text-danger-700 text-xl"
+              onClick={() => {
+                if (confirm(`¿Eliminar "${it.nombre}" del carrito?`)) removeItem(it.producto_id);
+              }}
+              className="text-danger-500 hover:text-danger-700 text-xl cursor-pointer"
               title="Eliminar"
             >
               ✕

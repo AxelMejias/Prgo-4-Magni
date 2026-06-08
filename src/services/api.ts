@@ -186,7 +186,7 @@ export const productosApi = {
   getAll: (
     page = 1,
     size = 20,
-    params?: { nombre?: string; solo_disponibles?: boolean; categoria_id?: number }
+    params?: { nombre?: string; solo_disponibles?: boolean; categoria_id?: number; solo_destacados?: boolean }
   ) => {
     const qs = new URLSearchParams({ page: String(page), size: String(size) });
     if (params?.nombre) qs.set("nombre", params.nombre);
@@ -194,6 +194,8 @@ export const productosApi = {
       qs.set("solo_disponibles", String(params.solo_disponibles));
     if (params?.categoria_id !== undefined)
       qs.set("categoria_id", String(params.categoria_id));
+    if (params?.solo_destacados)
+      qs.set("solo_destacados", "true");
     return get<PaginatedProductos>(`/api/v1/productos/?${qs}`);
   },
   getAllForSelect: () =>
@@ -210,6 +212,13 @@ export const productosApi = {
       headers: { ...authHeaders(), "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ disponible }),
+    }).then((r) => handleResponse<ProductoDetalle>(r)),
+  toggleDestacado: (id: number, destacado: boolean) =>
+    fetch(`${BASE}/api/v1/productos/${id}/destacar`, {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ destacado }),
     }).then((r) => handleResponse<ProductoDetalle>(r)),
   delete: (id: number) => del(`/api/v1/productos/${id}`),
 

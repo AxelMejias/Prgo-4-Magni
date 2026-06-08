@@ -84,6 +84,7 @@ export interface ProductoListItem {
   margen_ganancia: number;
   costo_total_insumos: number;
   disponible: boolean;
+  destacado: boolean;
   categorias: Categoria[];
   insumos: InsumoEnProducto[];
   created_at: string;

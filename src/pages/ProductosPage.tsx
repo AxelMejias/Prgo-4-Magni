@@ -143,6 +143,13 @@ export default function ProductosPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
   });
 
+  const destacarMutation = useMutation({
+    mutationFn: ({ id, destacado }: { id: number; destacado: boolean }) =>
+      productosApi.toggleDestacado(id, destacado),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
+    onError: (err: Error) => alert(err.message),
+  });
+
   const reactivarMutation = useMutation({
     mutationFn: (id: number) => productosApi.reactivar(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
@@ -521,6 +528,22 @@ export default function ProductosPage() {
                               className="p-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-all text-xs font-semibold cursor-pointer"
                             >
                               ✏️ Editar
+                            </button>
+                          )}
+                          {canManage && (
+                            <button
+                              onClick={() =>
+                                destacarMutation.mutate({ id: prod.id, destacado: !prod.destacado })
+                              }
+                              disabled={destacarMutation.isPending}
+                              title={prod.destacado ? "Quitar de destacados" : "Destacar en Inicio"}
+                              className={`p-2 rounded-lg transition-all text-xs font-semibold cursor-pointer disabled:opacity-50 ${
+                                prod.destacado
+                                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                                  : "bg-surface-50 text-surface-400 hover:bg-yellow-50 hover:text-yellow-600"
+                              }`}
+                            >
+                              ⭐
                             </button>
                           )}
                           {canManage && (
