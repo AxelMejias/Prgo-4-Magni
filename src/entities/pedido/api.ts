@@ -99,6 +99,14 @@ export const pedidoApi = {
     }
   },
 
+  /** Confirma el pago MP desde el frontend (ESPERANDO_PAGO → PENDIENTE). */
+  confirmarPagoMp: async (id: number): Promise<Pedido> => {
+    const { data } = await axiosClient.post<Pedido>(
+      `/api/v1/pedidos/${id}/confirmar-pago-mp`
+    );
+    return data;
+  },
+
   /** Consulta el estado de pago en MP (para polling del popup). */
   verificarPago: async (id: number): Promise<{ status: string; payment_id: number | null }> => {
     const { data } = await axiosClient.get<{ status: string; payment_id: number | null }>(

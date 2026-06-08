@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useCartStore } from "../features/cart/model/cartStore";
+import { pedidoApi } from "../entities/pedido/api";
 
 const REDIRECT_SECONDS = 5;
 
@@ -19,10 +20,18 @@ export default function PedidoExitosoPage() {
   const isFailure  = !isApproved && !isPending;
 
   const redirectTarget = pedidoId ? `/mis-pedidos/${pedidoId}` : "/mis-pedidos";
+  const confirmedRef = useRef(false);
 
-  // Limpiar carrito al llegar con pago aprobado (por si quedó algo)
+  // Confirmar pago en el backend y limpiar carrito al llegar con approved
   useEffect(() => {
-    if (isApproved) clearCart();
+    if (!isApproved || confirmedRef.current) return;
+    confirmedRef.current = true;
+    clearCart();
+    if (pedidoId) {
+      pedidoApi.confirmarPagoMp(Number(pedidoId)).catch(() => {
+        // idempotente: si ya estaba confirmado no hay problema
+      });
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Redirect automático tras countdown (no para failure — el usuario decide)
