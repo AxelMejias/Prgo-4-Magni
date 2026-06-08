@@ -11,6 +11,7 @@ import { useAuthStore } from "../shared/store/authStore";
 const PAGE_SIZE = 10;
 const ESTADOS: { codigo: EstadoCodigo | ""; label: string }[] = [
   { codigo: "", label: "Todos" },
+  { codigo: "ESPERANDO_PAGO", label: "Esperando pago" },
   { codigo: "PENDIENTE",  label: "Pendientes" },
   { codigo: "CONFIRMADO", label: "Confirmados" },
   { codigo: "EN_PREP",    label: "En preparación" },
@@ -137,38 +138,52 @@ export default function MisPedidosPage() {
       )}
 
       <div className="space-y-3">
-        {data?.items.map((pedido) => (
-          <Link
-            key={pedido.id}
-            to={`/mis-pedidos/${pedido.id}`}
-            className="block bg-white rounded-2xl border border-surface-200 p-5 hover:shadow-md hover:border-brand-200 transition-all"
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm">
-                  #{pedido.id}
+        {data?.items.map((pedido) => {
+          const esperandoPago = pedido.estado_codigo === "ESPERANDO_PAGO";
+          return (
+            <Link
+              key={pedido.id}
+              to={`/mis-pedidos/${pedido.id}`}
+              className={`block bg-white rounded-2xl border p-5 hover:shadow-md transition-all ${
+                esperandoPago
+                  ? "border-warning-300 bg-warning-50 hover:border-warning-400"
+                  : "border-surface-200 hover:border-brand-200"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                    esperandoPago ? "bg-warning-100 text-warning-700" : "bg-brand-100 text-brand-700"
+                  }`}>
+                    #{pedido.id}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-surface-900 text-sm">
+                      Pedido #{pedido.id}
+                    </p>
+                    <p className="text-xs text-surface-500">
+                      {formatDateTime(pedido.created_at)}
+                    </p>
+                    {esperandoPago && (
+                      <p className="text-xs text-warning-600 font-semibold mt-0.5">
+                        Pago pendiente — tocá para completarlo
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-surface-900 text-sm">
-                    Pedido #{pedido.id}
-                  </p>
-                  <p className="text-xs text-surface-500">
-                    {formatDateTime(pedido.created_at)}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <EstadoBadge estado={pedido.estado_codigo} />
+                  <div className="text-right">
+                    <p className="text-xs text-surface-500">Total</p>
+                    <p className="font-bold text-brand-700">
+                      {formatARS(toNumber(pedido.total))}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <EstadoBadge estado={pedido.estado_codigo} />
-                <div className="text-right">
-                  <p className="text-xs text-surface-500">Total</p>
-                  <p className="font-bold text-brand-700">
-                    {formatARS(toNumber(pedido.total))}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Paginación */}

@@ -43,9 +43,8 @@ export default function CheckoutPage() {
     mutationFn: (payload: PedidoCreate) => pedidoApi.create(payload),
     onSuccess: (pedido) => {
       if (pedido.init_point) {
-        // Redirigir a MP en la misma pestaña. El back_url de MP vuelve al backend
-        // que confirma/cancela el pedido y redirige a /pedido-exitoso.
-        clearCart();
+        // Carrito se limpia recién cuando MP confirma el pago (en PedidoExitosoPage).
+        // No limpiar acá para que el usuario pueda volver si abandona el pago.
         window.location.href = pedido.init_point;
       } else {
         clearCart();

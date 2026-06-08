@@ -255,6 +255,25 @@ export default function PedidoDetallePage() {
         </div>
       </section>
 
+      {/* Completar pago — solo para ESPERANDO_PAGO con init_point disponible */}
+      {pedido.estado_codigo === "ESPERANDO_PAGO" && pedido.init_point && (
+        <section className="bg-warning-50 rounded-2xl border border-warning-200 p-6 space-y-3">
+          <h2 className="font-bold text-warning-800">Pago pendiente</h2>
+          <p className="text-sm text-warning-700">
+            Este pedido fue creado pero el pago no fue completado. Podés retomar el pago
+            o cancelar el pedido si ya no lo necesitás.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <a
+              href={pedido.init_point}
+              className="px-5 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors"
+            >
+              Completar pago con MercadoPago
+            </a>
+          </div>
+        </section>
+      )}
+
       {/* Acciones de FSM */}
       {nextStates.length > 0 && (
         <section className="bg-white rounded-2xl border border-surface-200 p-6">
