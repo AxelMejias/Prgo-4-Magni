@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import { pedidoApi } from "../entities/pedido/api";
 import type { EstadoCodigo } from "../entities/pedido/model";
 import { useAuthStore } from "../shared/store/authStore";
+import { useWebSocket, type WsMessage } from "../shared/hooks/useWebSocket";
 import EstadoBadge from "../features/pedido-estado/ui/EstadoBadge";
 import HistorialList from "../features/pedido-estado/ui/HistorialList";
 import {
@@ -16,9 +17,35 @@ import { formatARS, formatDateTime, toNumber } from "../shared/lib/format";
 export default function PedidoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const pedidoId = Number(id);
-  const queryClient = useQueryClient();
-  const hasRole = useAuthStore((s) => s.hasRole);
+  const queryClient    = useQueryClient();
+  const hasRole        = useAuthStore((s) => s.hasRole);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const esStaff = hasRole(["ADMIN", "PEDIDOS"]);
+
+  // Ref para subscribeToOrder (evita closure vicio en el callback de WS)
+  const subscribeRef = useRef<(id: number) => void>(() => {});
+
+  const { subscribeToOrder } = useWebSocket({
+    enabled: isAuthenticated && !!pedidoId,
+    onMessage: useCallback(
+      (msg: WsMessage) => {
+        if (msg.event === "WS_CONNECTED") {
+          // Para clientes: suscribirse a la room específica del pedido
+          subscribeRef.current(pedidoId);
+        } else if (msg.event === "NUEVO_PEDIDO" || msg.event.startsWith("PEDIDO_")) {
+          queryClient.invalidateQueries({
+            queryKey: ["pedidos", "detalle", pedidoId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["pedidos", "detalle", pedidoId, "historial"],
+          });
+        }
+      },
+      [queryClient, pedidoId]
+    ),
+  });
+
+  useEffect(() => { subscribeRef.current = subscribeToOrder; }, [subscribeToOrder]);
 
   const [motivoCancelar, setMotivoCancelar] = useState("");
   const [restaurarStock, setRestaurarStock] = useState(true);

@@ -1,9 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { pedidoApi } from "../entities/pedido/api";
 import type { EstadoCodigo, PedidoFilters } from "../entities/pedido/model";
 import EstadoBadge from "../features/pedido-estado/ui/EstadoBadge";
 import { formatARS, formatDateTime } from "../shared/lib/format";
+import { useWebSocket, type WsMessage } from "../shared/hooks/useWebSocket";
+import { useAuthStore } from "../shared/store/authStore";
 
 const PAGE_SIZE = 15;
 
@@ -27,6 +30,26 @@ export default function AdminPedidosPage() {
     size: PAGE_SIZE,
     estado_codigo: estadoQs || undefined,
   };
+
+  const queryClient    = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // ── WebSocket: invalida la lista cuando llega cualquier evento de pedido
+  useWebSocket({
+    enabled: isAuthenticated,
+    onMessage: useCallback(
+      (msg: WsMessage) => {
+        if (
+          msg.event === "WS_CONNECTED" ||
+          msg.event === "NUEVO_PEDIDO" ||
+          msg.event.startsWith("PEDIDO_")
+        ) {
+          queryClient.invalidateQueries({ queryKey: ["pedidos"] });
+        }
+      },
+      [queryClient]
+    ),
+  });
 
   // ── useQuery: el backend ve que sos STAFF y devuelve TODOS los pedidos
   const { data, isLoading, isError, error } = useQuery({

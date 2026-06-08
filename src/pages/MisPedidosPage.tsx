@@ -1,10 +1,12 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { pedidoApi } from "../entities/pedido/api";
-import type { EstadoCodigo } from "../entities/pedido/model";
+import type { EstadoCodigo, PaginatedPedidos } from "../entities/pedido/model";
 import EstadoBadge from "../features/pedido-estado/ui/EstadoBadge";
 import { formatARS, formatDateTime, toNumber } from "../shared/lib/format";
+import { useWebSocket, type WsMessage } from "../shared/hooks/useWebSocket";
+import { useAuthStore } from "../shared/store/authStore";
 
 const PAGE_SIZE = 10;
 const ESTADOS: { codigo: EstadoCodigo | ""; label: string }[] = [
@@ -17,10 +19,40 @@ const ESTADOS: { codigo: EstadoCodigo | ""; label: string }[] = [
   { codigo: "CANCELADO",  label: "Cancelados" },
 ];
 
+const TERMINAL_ESTADOS = new Set<EstadoCodigo>(["ENTREGADO", "CANCELADO"]);
+
 export default function MisPedidosPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const estadoParam = (searchParams.get("estado") ?? "") as EstadoCodigo | "";
+
+  const queryClient    = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // Refs para evitar closures viejos en el callback de WS
+  const dataRef      = useRef<PaginatedPedidos | undefined>(undefined);
+  const subscribeRef = useRef<(id: number) => void>(() => {});
+
+  const { subscribeToOrder } = useWebSocket({
+    enabled: isAuthenticated,
+    onMessage: useCallback(
+      (msg: WsMessage) => {
+        if (msg.event === "WS_CONNECTED") {
+          // Recargá la lista y suscribite a los pedidos activos conocidos
+          queryClient.invalidateQueries({ queryKey: ["mis-pedidos"] });
+          dataRef.current?.items
+            .filter((p) => !TERMINAL_ESTADOS.has(p.estado_codigo))
+            .forEach((p) => subscribeRef.current(p.id));
+        } else if (msg.event === "NUEVO_PEDIDO" || msg.event.startsWith("PEDIDO_")) {
+          queryClient.invalidateQueries({ queryKey: ["mis-pedidos"] });
+        }
+      },
+      [queryClient]
+    ),
+  });
+
+  // Mantener refs actualizados
+  useEffect(() => { subscribeRef.current = subscribeToOrder; }, [subscribeToOrder]);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["mis-pedidos", page, estadoParam],
@@ -31,6 +63,15 @@ export default function MisPedidosPage() {
         estado_codigo: estadoParam || undefined,
       }),
   });
+
+  // Cuando los datos cargan, sincronizar el ref y suscribirse a pedidos activos
+  useEffect(() => {
+    dataRef.current = data;
+    if (!data) return;
+    data.items
+      .filter((p) => !TERMINAL_ESTADOS.has(p.estado_codigo))
+      .forEach((p) => subscribeRef.current(p.id));
+  }, [data]);
 
   function setPage(p: number) {
     setSearchParams((prev) => {
