@@ -235,10 +235,23 @@ export default function StorePage() {
 
             {/* Hero banner */}
             <section className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-purple-600 p-10 md:p-14 text-white">
+              {/* Círculos decorativos de fondo */}
               <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/3 pointer-events-none" />
               <div className="absolute bottom-0 right-24 w-56 h-56 rounded-full bg-white/5 translate-y-1/3 pointer-events-none" />
-              <div className="absolute top-1/2 right-10 text-9xl opacity-10 select-none pointer-events-none">🍔</div>
+              <div className="absolute top-1/4 left-1/2 w-72 h-72 rounded-full bg-white/[0.03] pointer-events-none" />
+
+              {/* Íconos de comida genéricos — textura decorativa, no identifican un plato */}
+              <div className="absolute right-14 top-8 text-7xl opacity-[0.12] select-none pointer-events-none rotate-12">🍽️</div>
+              <div className="absolute right-8 bottom-10 text-4xl opacity-[0.10] select-none pointer-events-none -rotate-6">☕</div>
+              <div className="absolute right-36 bottom-8 text-3xl opacity-[0.08] select-none pointer-events-none rotate-3">🥗</div>
+              <div className="absolute right-28 top-10 text-2xl opacity-[0.07] select-none pointer-events-none -rotate-12">✨</div>
+
               <div className="relative z-10 max-w-xl">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3.5 py-1 text-xs font-semibold mb-5 tracking-wide">
+                  ⚡ Pedidos al instante
+                </div>
+
                 <p className="text-brand-100 text-xs font-bold uppercase tracking-[0.2em] mb-3">
                   Bienvenido a
                 </p>
@@ -248,12 +261,22 @@ export default function StorePage() {
                 <p className="text-brand-100 text-lg mb-8 leading-relaxed max-w-sm">
                   Los mejores productos, preparados con ingredientes frescos. Pedí directo desde tu mesa.
                 </p>
-                <button
-                  onClick={() => catalogoRef.current?.scrollIntoView({ behavior: "smooth" })}
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-white text-brand-700 font-bold rounded-2xl hover:bg-brand-50 transition-all shadow-lg hover:shadow-xl active:scale-95"
-                >
-                  Ver el catálogo <span>↓</span>
-                </button>
+
+                <div className="flex items-center gap-4 flex-wrap">
+                  <button
+                    onClick={() => catalogoRef.current?.scrollIntoView({ behavior: "smooth" })}
+                    className="inline-flex items-center gap-2 px-8 py-3 bg-white text-brand-700 font-bold rounded-2xl hover:bg-brand-50 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                  >
+                    Ver el catálogo <span>↓</span>
+                  </button>
+                </div>
+
+                {/* Mini trust bar */}
+                <div className="flex items-center gap-5 mt-8 pt-6 border-t border-white/20 flex-wrap">
+                  <span className="flex items-center gap-1.5 text-sm text-white/75"><span>✅</span> Ingredientes frescos</span>
+                  <span className="flex items-center gap-1.5 text-sm text-white/75"><span>🔒</span> Pago seguro</span>
+                  <span className="flex items-center gap-1.5 text-sm text-white/75"><span>📦</span> Seguí tu pedido en vivo</span>
+                </div>
               </div>
             </section>
 
