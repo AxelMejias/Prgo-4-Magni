@@ -156,8 +156,12 @@ export default function HomeStorePage() {
                   onClick={() => setDetailId(p.id)}
                   className="bg-white rounded-2xl border border-surface-200 p-4 flex flex-col gap-3 hover:shadow-md hover:border-brand-300 transition-all cursor-pointer"
                 >
-                  <div className="h-32 bg-gradient-to-br from-brand-100 to-purple-100 rounded-xl flex items-center justify-center text-4xl">
-                    🍔
+                  <div className="h-32 bg-gradient-to-br from-brand-100 to-purple-100 rounded-xl overflow-hidden flex items-center justify-center text-4xl">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.nombre} className="w-full h-full object-cover" />
+                    ) : (
+                      "🍔"
+                    )}
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-surface-900 line-clamp-1">{p.nombre}</h3>
@@ -246,8 +250,12 @@ export default function HomeStorePage() {
             ) : detail ? (
               <>
                 {/* Hero */}
-                <div className="h-40 bg-gradient-to-br from-brand-100 to-purple-100 rounded-t-2xl flex items-center justify-center text-6xl relative">
-                  🍔
+                <div className="h-40 bg-gradient-to-br from-brand-100 to-purple-100 rounded-t-2xl overflow-hidden flex items-center justify-center text-6xl relative">
+                  {detail.image_url ? (
+                    <img src={detail.image_url} alt={detail.nombre} className="w-full h-full object-cover" />
+                  ) : (
+                    "🍔"
+                  )}
                   <button
                     onClick={() => setDetailId(null)}
                     className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-surface-500 hover:text-surface-800 transition cursor-pointer text-xl leading-none"

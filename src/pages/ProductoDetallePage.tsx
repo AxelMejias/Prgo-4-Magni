@@ -71,8 +71,12 @@ export default function ProductoDetallePage() {
       <div className="bg-white rounded-xl border border-surface-200 p-6 mb-6 shadow-sm">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-brand-500 flex items-center justify-center text-2xl shadow-sm">
-              📦
+            <div className="w-14 h-14 rounded-xl bg-brand-500 overflow-hidden flex items-center justify-center text-2xl shadow-sm">
+              {producto.image_url ? (
+                <img src={producto.image_url} alt={producto.nombre} className="w-full h-full object-cover" />
+              ) : (
+                "📦"
+              )}
             </div>
             <div>
               <h1 className="text-2xl font-bold text-surface-800">{producto.nombre}</h1>

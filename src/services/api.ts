@@ -271,4 +271,22 @@ export const productosApi = {
     }
     return response.json();
   },
+
+  uploadImage: async (file: File): Promise<string> => {
+    const token = useAuthStore.getState().accessToken;
+    const form = new FormData();
+    form.append("archivo", file);
+    const response = await fetch(`${BASE}/api/v1/productos/upload-image`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+      body: form,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.detail?.detail || body?.detail || `Error ${response.status}`);
+    }
+    const data = await response.json();
+    return data.image_url;
+  },
 };

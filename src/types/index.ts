@@ -79,6 +79,7 @@ export interface ProductoListItem {
   id: number;
   nombre: string;
   descripcion?: string;
+  image_url?: string | null;
   precio: number;
   margen_ganancia: number;
   costo_total_insumos: number;
@@ -102,6 +103,7 @@ export interface ProductoDetalle extends ProductoListItem {}
 export interface ProductoCreate {
   nombre: string;
   descripcion?: string;
+  image_url?: string | null;
   margen_ganancia: number;
   disponible?: boolean;
   categoria_ids: number[];
@@ -111,6 +113,7 @@ export interface ProductoCreate {
 export interface ProductoUpdate {
   nombre?: string;
   descripcion?: string;
+  image_url?: string | null;
   margen_ganancia?: number;
   disponible?: boolean;
   categoria_ids?: number[];

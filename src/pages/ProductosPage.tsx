@@ -46,6 +46,8 @@ export default function ProductosPage() {
   const [margenGanancia, setMargenGanancia] = useState("30");
   const [selectedCategorias, setSelectedCategorias] = useState<number[]>([]);
   const [selectedInsumos, setSelectedInsumos] = useState<{ ingrediente_id: number; cantidad: string }[]>([]);
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
 
@@ -93,6 +95,7 @@ export default function ProductosPage() {
   // Cargar datos al editar
   useEffect(() => {
     if (editingDetail && editingId) {
+      setImageUrl(editingDetail.image_url ?? "");
       setSelectedCategorias(editingDetail.categorias.map((c) => c.id));
       setSelectedInsumos(
         editingDetail.insumos.map((i) => ({
@@ -230,6 +233,7 @@ export default function ProductosPage() {
     setEditingId(null);
     setNombre("");
     setDescripcion("");
+    setImageUrl("");
     setMargenGanancia("30");
     setSelectedCategorias([]);
     setSelectedInsumos([]);
@@ -241,6 +245,7 @@ export default function ProductosPage() {
     setEditingId(prod.id);
     setNombre(prod.nombre);
     setDescripcion(prod.descripcion ?? "");
+    setImageUrl(prod.image_url ?? "");
     setMargenGanancia(String(Math.round(Number(prod.margen_ganancia) * 100)));
     setSelectedCategorias([]);
     setSelectedInsumos([]);
@@ -251,7 +256,24 @@ export default function ProductosPage() {
   function closeModal() {
     setModalOpen(false);
     setEditingId(null);
+    setImageUrl("");
     setError("");
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    setError("");
+    try {
+      const url = await productosApi.uploadImage(file);
+      setImageUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al subir imagen");
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = "";
+    }
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -273,6 +295,7 @@ export default function ProductosPage() {
         data: {
           nombre,
           descripcion: descripcion || undefined,
+          image_url: imageUrl || undefined,
           margen_ganancia: Number(margenGanancia) / 100,
           categoria_ids: selectedCategorias,
           insumos: insumosValidos,
@@ -282,6 +305,7 @@ export default function ProductosPage() {
       createMutation.mutate({
         nombre,
         descripcion: descripcion || undefined,
+        image_url: imageUrl || undefined,
         margen_ganancia: Number(margenGanancia) / 100,
         categoria_ids: selectedCategorias,
         insumos: insumosValidos,
@@ -789,6 +813,46 @@ export default function ProductosPage() {
               className="w-full border border-surface-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
               placeholder="Ej: Hamburguesa Clásica"
             />
+          </div>
+
+          {/* Imagen del producto */}
+          <div>
+            <label className="block text-sm font-semibold text-surface-700 mb-1.5">
+              Imagen del producto
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-xl border border-surface-200 bg-surface-50 flex items-center justify-center overflow-hidden shrink-0">
+                {imageUrl ? (
+                  <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-3xl">🍔</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <label className="block">
+                  <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border cursor-pointer transition ${isUploadingImage ? "bg-surface-100 text-surface-400 border-surface-200" : "bg-white text-brand-600 border-brand-300 hover:bg-brand-50"}`}>
+                    {isUploadingImage ? "Subiendo..." : imageUrl ? "Cambiar imagen" : "Seleccionar imagen"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={isUploadingImage}
+                      onChange={handleImageUpload}
+                    />
+                  </span>
+                </label>
+                {imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("")}
+                    className="text-xs text-danger-500 hover:text-danger-700 transition"
+                  >
+                    Quitar imagen
+                  </button>
+                )}
+                <p className="text-xs text-surface-400">JPG, PNG o WebP. Máx. 5 MB.</p>
+              </div>
+            </div>
           </div>
 
           {/* Descripción automática */}
