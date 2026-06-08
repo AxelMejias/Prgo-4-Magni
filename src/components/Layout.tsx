@@ -1,40 +1,9 @@
 import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../shared/store/authStore";
 import { authApi } from "../shared/api/authApi";
-import CartIcon from "../widgets/cart-icon/ui/CartIcon";
 
-// Cada item define qué roles pueden verlo. [] = todos los autenticados.
+// Cada item define qué roles pueden verlo.
 const navItems = [
-  // ── Store (todos los autenticados) ──────────────────────────────────
-  {
-    to: "/inicio",
-    label: "Inicio",
-    icon: "🏠",
-    color: "bg-brand-400",
-    roles: [],
-  },
-  {
-    to: "/tienda",
-    label: "Tienda",
-    icon: "🛍️",
-    color: "bg-brand-500",
-    roles: [],
-  },
-  {
-    to: "/mis-pedidos",
-    label: "Mis pedidos",
-    icon: "📋",
-    color: "bg-purple-500",
-    roles: ["CLIENT"],
-  },
-  {
-    to: "/mis-direcciones",
-    label: "Mis direcciones",
-    icon: "📍",
-    color: "bg-success-500",
-    roles: ["CLIENT"],
-  },
-
   // ── Admin Pedidos (Caja / Empleado) ─────────────────────────────────
   {
     to: "/admin/pedidos",
@@ -97,9 +66,6 @@ export default function Layout() {
     item.roles.length === 0 || hasRole(item.roles)
   );
 
-  // El carrito solo lo ve quien es CLIENT (ADMIN/STOCK/PEDIDOS no compran)
-  const showCart = hasRole(["CLIENT"]);
-
   async function handleLogout() {
     try {
       if (refreshToken) await authApi.logout(refreshToken);
@@ -154,12 +120,21 @@ export default function Layout() {
           </div>
         </nav>
 
-        {/* ───── ACÁ va el carrito ───── */}
-        {showCart && (
-          <div className="px-3 pb-3 border-t border-white/10 pt-3">
-            <CartIcon />
-          </div>
-        )}
+        {/* Botón "Ver tienda" — abre el store front en pestaña nueva */}
+        <div className="px-3 pb-3 border-t border-white/10 pt-3">
+          <a
+            href="/store"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-sidebar-500 hover:text-white hover:bg-white/5"
+          >
+            <span className="w-8 h-8 rounded-lg flex items-center justify-center text-sm bg-brand-500 text-white shadow-sm">
+              🛍️
+            </span>
+            Ver tienda
+            <span className="ml-auto text-[10px] text-sidebar-500">↗</span>
+          </a>
+        </div>
 
         {/* Usuario + roles + logout */}
         {user && (
