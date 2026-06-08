@@ -82,6 +82,7 @@ export interface Pedido {
   created_at: string;
   updated_at?: string | null;
   detalles: DetallePedido[];
+  init_point?: string | null;
 }
 
 export interface PaginatedPedidos {

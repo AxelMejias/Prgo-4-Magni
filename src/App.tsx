@@ -25,6 +25,8 @@ import PedidoDetallePage from "./pages/PedidoDetallePage";
 // Admin Pedidos (Staff)
 import AdminPedidosPage from "./pages/AdminPedidosPage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
+import PedidoExitosoPage from "./pages/PedidoExitosoPage";
+import MpCheckoutRedirectPage from "./pages/MpCheckoutRedirectPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +46,12 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+          {/* ── Públicas: flujo de MercadoPago ─────────────────────────── */}
+          <Route path="/mp-checkout-redirect" element={<MpCheckoutRedirectPage />} />
+          <Route element={<Layout />}>
+            <Route path="/pedido-exitoso" element={<PedidoExitosoPage />} />
+          </Route>
 
           {/* ── Protegidas: autenticado ─────────────────────── */}
           <Route element={<ProtectedRoute />}>

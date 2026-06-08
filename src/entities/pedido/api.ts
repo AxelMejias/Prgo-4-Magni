@@ -77,15 +77,10 @@ export const pedidoApi = {
 
   // ─── Mutaciones ───────────────────────────────────────────────────────
   create: async (payload: PedidoCreate): Promise<Pedido> => {
-    try {
-      const { data } = await axiosClient.post<Pedido>(
-        "/api/v1/pedidos/",
-        payload
-      );
-      return data;
-    } catch (err) {
-      throw extractMsg(err);
-    }
+    // No usamos extractMsg acá para preservar response.data en onError
+    // (necesario para detectar STOCK_INSUFICIENTE y PRODUCTO_NO_DISPONIBLE)
+    const { data } = await axiosClient.post<Pedido>("/api/v1/pedidos/", payload);
+    return data;
   },
 
   /** STAFF (ADMIN/PEDIDOS) — avanza por la FSM. */
@@ -102,6 +97,14 @@ export const pedidoApi = {
     } catch (err) {
       throw extractMsg(err);
     }
+  },
+
+  /** Consulta el estado de pago en MP (para polling del popup). */
+  verificarPago: async (id: number): Promise<{ status: string; payment_id: number | null }> => {
+    const { data } = await axiosClient.get<{ status: string; payment_id: number | null }>(
+      `/api/v1/pedidos/${id}/verificar-pago`
+    );
+    return data;
   },
 
   /** CLIENT — cancela su propio pedido (solo PENDIENTE/CONFIRMADO). */
