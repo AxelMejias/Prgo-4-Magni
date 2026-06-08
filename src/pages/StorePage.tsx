@@ -61,13 +61,10 @@ export default function StorePage() {
   const addItem = useCartStore((s) => s.addItem);
   const canBuy  = useAuthStore((s) => s.hasRole(["CLIENT"]));
 
-  const showHero = !nombreParam && !categoriaParam && currentPage === 1;
-
   // ── Productos destacados ───────────────────────────────────────
   const { data: destacadosData } = useQuery({
     queryKey: ["productos", "store-destacados"],
     queryFn:  () => productosApi.getAll(1, 4, { solo_disponibles: true, solo_destacados: true }),
-    enabled:  showHero,
   });
 
   const sinDestacados = destacadosData !== undefined && destacadosData.items.length === 0;
@@ -75,7 +72,7 @@ export default function StorePage() {
   const { data: fallbackData } = useQuery({
     queryKey: ["productos", "store-fallback"],
     queryFn:  () => productosApi.getAll(1, 4, { solo_disponibles: true }),
-    enabled:  sinDestacados && showHero,
+    enabled:  sinDestacados,
   });
 
   const featuredItems =
@@ -188,7 +185,7 @@ export default function StorePage() {
       params.set("page", String(p));
       return params;
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => catalogoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   }
 
   function setCategoria(id: number) {
@@ -199,6 +196,7 @@ export default function StorePage() {
       else params.delete("categoria");
       return params;
     });
+    setTimeout(() => catalogoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   }
 
   function setSort(value: SortKey) {
@@ -229,9 +227,8 @@ export default function StorePage() {
     <div>
 
       {/* ── Hero + Features + Destacados ────────────────────────── */}
-      {showHero && (
-        <div className="bg-white border-b border-surface-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 space-y-12">
+      <div className="bg-white border-b border-surface-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 space-y-12">
 
             {/* Hero banner */}
             <section className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-purple-600 p-10 md:p-14 text-white">
@@ -322,7 +319,7 @@ export default function StorePage() {
                       <div className="aspect-[4/3] bg-white rounded-xl overflow-hidden flex items-center justify-center text-4xl relative">
                         {p.image_url ? (
                           <img src={p.image_url} alt={p.nombre} className="max-w-full max-h-full object-contain" />
-                        ) : "🍔"}
+                        ) : "🍽️"}
                         <StockBadge insumos={p.insumos} />
                       </div>
                       <div className="flex-1">
@@ -340,9 +337,8 @@ export default function StorePage() {
                 </div>
               </section>
             )}
-          </div>
         </div>
-      )}
+      </div>
 
       {/* ── Catálogo ─────────────────────────────────────────────── */}
       <section
@@ -466,7 +462,9 @@ export default function StorePage() {
         {isError   && <p className="text-danger-600">Error al cargar productos.</p>}
 
         {data && (
-          <>
+          // min-h garantiza que la paginación no salte cuando la última página
+          // tiene menos productos que PAGE_SIZE (una sola fila en vez de dos)
+          <div className="min-h-[540px] flex flex-col">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {sortedItems.length === 0 ? (
                 <p className="col-span-full text-surface-500 py-8 text-center">
@@ -482,7 +480,7 @@ export default function StorePage() {
                     <div className="aspect-[4/3] bg-white rounded-xl overflow-hidden flex items-center justify-center text-4xl relative">
                       {p.image_url ? (
                         <img src={p.image_url} alt={p.nombre} className="max-w-full max-h-full object-contain" />
-                      ) : "🍔"}
+                      ) : "🍽️"}
                       <StockBadge insumos={p.insumos} />
                     </div>
                     <div className="flex-1">
@@ -520,8 +518,11 @@ export default function StorePage() {
               )}
             </div>
 
+            {/* Spacer empuja la paginación al fondo del contenedor min-h */}
+            <div className="flex-1" />
+
             {data.pages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-4">
+              <div className="flex items-center justify-center gap-2 pt-6">
                 <button
                   onClick={() => setPage(currentPage - 1)}
                   disabled={currentPage <= 1}
@@ -549,7 +550,7 @@ export default function StorePage() {
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
       </section>
 
@@ -589,7 +590,7 @@ export default function StorePage() {
                   {detail.image_url ? (
                     <img src={detail.image_url} alt={detail.nombre} className="max-w-full max-h-full object-contain" />
                   ) : (
-                    <span className="text-6xl">🍔</span>
+                    <span className="text-6xl">🍽️</span>
                   )}
                   <button
                     onClick={closeDetail}
