@@ -22,14 +22,14 @@ export default function ListaPage() {
   const [paginaActual, setPaginaActual] = useState(1);
   const [mostrarBaja, setMostrarBaja] = useState(false);
 
-  // useRef — PARTE 1: referencia a la sección de filtros para foco con Ctrl+B
-  const filtrosRef = useRef<HTMLElement>(null);
+  // useRef — PARTE 1: referencia al input de búsqueda para foco directo con Ctrl+B
+  const filtrosRef = useRef<HTMLInputElement>(null);
 
-  // Si llegamos desde Ctrl+B (desde cualquier pantalla), enfocar filtros
+  // Si llegamos desde Ctrl+B (desde cualquier pantalla), enfocar el input de búsqueda
   useEffect(() => {
     if ((location.state as { focusFiltros?: boolean })?.focusFiltros) {
-      filtrosRef.current?.focus();
       filtrosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      filtrosRef.current?.focus();
     }
   }, [location.state]);
 

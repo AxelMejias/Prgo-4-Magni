@@ -16,8 +16,8 @@ interface FiltrosProps {
   visibles: number;
 }
 
-// forwardRef — PARTE 1: permite a ListaPage mover el foco aquí con Ctrl+B
-const Filtros = forwardRef<HTMLElement, FiltrosProps>(function Filtros(
+// forwardRef — PARTE 1: permite a ListaPage mover el foco al input de búsqueda con Ctrl+B
+const Filtros = forwardRef<HTMLInputElement, FiltrosProps>(function Filtros(
   { filtros, setFiltros, onLimpiar, total, visibles },
   ref,
 ) {
@@ -39,8 +39,7 @@ const Filtros = forwardRef<HTMLElement, FiltrosProps>(function Filtros(
   };
 
   return (
-    // tabIndex={-1} permite recibir foco programático (Ctrl+B)
-    <section ref={ref} tabIndex={-1} className="bg-white shadow rounded-xl p-5 mb-6 outline-none">
+    <section className="bg-white shadow rounded-xl p-5 mb-6 outline-none">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-800">Sección de filtros</h2>
@@ -75,6 +74,7 @@ const Filtros = forwardRef<HTMLElement, FiltrosProps>(function Filtros(
             Buscar por nombre
           </label>
           <input
+            ref={ref}
             id={nombreBusquedaId}
             type="text"
             placeholder="Ej: Juan"
