@@ -1,5 +1,8 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 type Resultado = 'success' | 'failure' | 'pending';
 
@@ -36,12 +39,37 @@ interface PagoResultadoPageProps {
 export default function PagoResultadoPage({ tipo }: PagoResultadoPageProps) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [cuenta, setCuenta] = useState(SEGUNDOS);
+  const registrado = useRef(false);
   const { icono, titulo, descripcion, color, btnColor } = config[tipo];
 
   const paymentId = params.get('payment_id');
   const status = params.get('status');
-  const externalReference = params.get('external_reference');
+  const externalRaw = params.get('external_reference');
+
+  let cursoInfo: { titulo?: string; precio?: number; comprador?: string } = {};
+  try {
+    if (externalRaw) {
+      cursoInfo = JSON.parse(externalRaw) as typeof cursoInfo;
+    } else {
+      // MP sandbox no siempre devuelve external_reference — usar sessionStorage como fallback
+      const stored = sessionStorage.getItem('ultimoCurso');
+      if (stored) cursoInfo = JSON.parse(stored) as typeof cursoInfo;
+    }
+  } catch { /* si no es JSON lo ignoramos */ }
+
+  // Registrar la compra en la DB (solo una vez, solo en success)
+  useEffect(() => {
+    if (tipo !== 'success' || !paymentId || registrado.current || !cursoInfo.titulo) return;
+    registrado.current = true;
+    void fetch(`${API_URL}/pagos/registrar-compra`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ curso: cursoInfo.titulo, precio: cursoInfo.precio }),
+    });
+    sessionStorage.removeItem('ultimoCurso');
+  }, [tipo, paymentId, token, cursoInfo.titulo, cursoInfo.precio]);
 
   useEffect(() => {
     if (cuenta <= 0) {
@@ -61,9 +89,14 @@ export default function PagoResultadoPage({ tipo }: PagoResultadoPageProps) {
 
         {paymentId && (
           <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 text-left text-sm text-slate-600 space-y-1">
-            {paymentId && <p><strong>ID de pago:</strong> {paymentId}</p>}
+            {cursoInfo.comprador && <p><strong>Comprador:</strong> {cursoInfo.comprador}</p>}
+            {cursoInfo.titulo && <p><strong>Curso:</strong> {cursoInfo.titulo}</p>}
+            {cursoInfo.precio && (
+              <p><strong>Precio:</strong> ${cursoInfo.precio.toLocaleString('es-AR')} ARS</p>
+            )}
+            <hr className="border-slate-100 my-1" />
+            <p><strong>ID de pago:</strong> {paymentId}</p>
             {status && <p><strong>Estado:</strong> {status}</p>}
-            {externalReference && <p><strong>Referencia:</strong> {externalReference}</p>}
           </div>
         )}
 

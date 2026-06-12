@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, type AuthRequest } from '../middleware/auth';
+import { pool } from '../db';
 
 const router = Router();
 
@@ -9,10 +10,10 @@ const client = new MercadoPagoConfig({
 });
 
 // POST /pagos/crear-preferencia
-// Recibe { titulo, precio } y devuelve { init_point }
+// Recibe { titulo, precio, comprador } y devuelve { checkout_url }
 router.post('/crear-preferencia', authMiddleware, async (req, res) => {
   try {
-    const { titulo, precio } = req.body as { titulo: string; precio: number };
+    const { titulo, precio, comprador } = req.body as { titulo: string; precio: number; comprador?: string };
 
     if (!titulo || !precio) {
       res.status(400).json({ error: 'titulo y precio son requeridos' });
@@ -33,6 +34,7 @@ router.post('/crear-preferencia', authMiddleware, async (req, res) => {
             currency_id: 'ARS',
           },
         ],
+        external_reference: JSON.stringify({ titulo, precio, comprador: comprador ?? '' }),
         back_urls: {
           success: `${BASE_URL}/cursos/success`,
           failure: `${BASE_URL}/cursos/failure`,
@@ -55,6 +57,39 @@ router.post('/crear-preferencia', authMiddleware, async (req, res) => {
       detalle: err.message,
       causa: err.cause,
     });
+  }
+});
+
+// POST /pagos/registrar-compra
+router.post('/registrar-compra', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { curso, precio } = req.body as { curso: string; precio: number };
+    const username = req.user!.username;
+    if (!curso || !precio) {
+      res.status(400).json({ error: 'curso y precio son requeridos' });
+      return;
+    }
+    await pool.query(
+      `INSERT INTO compras (username, curso, precio) VALUES ($1, $2, $3)`,
+      [username, curso, precio],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al registrar compra' });
+  }
+});
+
+// GET /pagos/historial
+router.get('/historial', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const username = req.user!.username;
+    const result = await pool.query(
+      `SELECT id, curso, precio, fecha FROM compras WHERE username = $1 ORDER BY fecha DESC`,
+      [username],
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener historial' });
   }
 });
 

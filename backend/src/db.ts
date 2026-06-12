@@ -38,6 +38,23 @@ export async function initDb() {
     throw err;
   }
 
+  // Tabla compras
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS compras (
+        id       SERIAL PRIMARY KEY,
+        username VARCHAR(100) NOT NULL,
+        curso    VARCHAR(200) NOT NULL,
+        precio   INTEGER      NOT NULL,
+        fecha    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log('Tabla "compras" lista.');
+  } catch (err) {
+    console.error('No se pudo crear la tabla "compras":', (err as Error).message);
+    throw err;
+  }
+
   // Tabla usuarios_db
   try {
     await pool.query(`

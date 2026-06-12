@@ -64,7 +64,7 @@ const cursos: Curso[] = [
 ];
 
 export default function CursosPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [cargando, setCargando] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +78,7 @@ export default function CursosPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ titulo: curso.titulo, precio: curso.precio }),
+        body: JSON.stringify({ titulo: curso.titulo, precio: curso.precio, comprador: user?.username }),
       });
 
       if (!res.ok) {
@@ -87,6 +87,8 @@ export default function CursosPage() {
       }
 
       const data = await res.json() as { checkout_url: string };
+      // Guardar info del curso para mostrarla en el comprobante al volver
+      sessionStorage.setItem('ultimoCurso', JSON.stringify({ titulo: curso.titulo, precio: curso.precio, comprador: user?.username }));
       // Redirigir al checkout de Mercado Pago
       window.location.href = data.checkout_url;
     } catch (err) {
