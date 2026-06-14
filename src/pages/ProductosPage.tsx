@@ -506,7 +506,7 @@ export default function ProductosPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-success-50 text-success-700">
-                          ${Number(prod.precio).toLocaleString("es-AR")}
+                          ${Number(prod.precio_base).toLocaleString("es-AR")}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -666,7 +666,7 @@ export default function ProductosPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-surface-100 text-surface-400">
-                          ${Number(prod.precio).toLocaleString("es-AR")}
+                          ${Number(prod.precio_base).toLocaleString("es-AR")}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">

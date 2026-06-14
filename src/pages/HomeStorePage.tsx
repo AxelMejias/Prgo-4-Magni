@@ -97,7 +97,7 @@ export default function HomeStorePage() {
     addItem({
       producto_id: p.id,
       nombre: p.nombre,
-      precio: toNumber(p.precio),
+      precio: toNumber(p.precio_base),
     });
     showToast(p.nombre);
   }
@@ -107,7 +107,7 @@ export default function HomeStorePage() {
     addItem({
       producto_id: detail.id,
       nombre: detail.nombre,
-      precio: toNumber(detail.precio),
+      precio: toNumber(detail.precio_base),
     });
     showToast(detail.nombre);
     setDetailId(null);
@@ -170,7 +170,7 @@ export default function HomeStorePage() {
                     </p>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
+                    <span className="font-bold text-brand-700">{formatARS(p.precio_base)}</span>
                     {canBuy && (
                       <button
                         onClick={(e) => handleAdd(p, e)}
@@ -279,7 +279,7 @@ export default function HomeStorePage() {
                       )}
                     </div>
                     <span className="text-2xl font-bold text-brand-700 whitespace-nowrap">
-                      {formatARS(detail.precio)}
+                      {formatARS(detail.precio_base)}
                     </span>
                   </div>
 
@@ -331,7 +331,7 @@ export default function HomeStorePage() {
                       onClick={handleAddFromDetail}
                       className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-colors"
                     >
-                      Agregar al carrito — {formatARS(detail.precio)}
+                      Agregar al carrito — {formatARS(detail.precio_base)}
                     </button>
                   )}
                 </div>

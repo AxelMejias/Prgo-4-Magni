@@ -1,30 +1,23 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useWsStore } from "../store/wsStore";
+import type { WsMessage } from "./useOrderStatus";
 
 const _apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:8000") as string;
-const WS_BASE = _apiUrl.replace(/^http/, "ws") + "/ws/pedidos";
+const WS_ADMIN_BASE = _apiUrl.replace(/^http/, "ws") + "/ws/admin/pedidos";
 
-export interface WsMessage {
-  event: string;
-  pedido_id?: number;
-  estado_anterior?: string | null;
-  estado_nuevo?: string;
-  usuario_id?: number | null;
-  motivo?: string | null;
-  timestamp?: string;
-  // synthetic (generado por el hook, no viene del servidor)
-  data?: unknown;
-}
-
-interface UseOrderStatusWSOptions {
+interface UseAdminOrdersFeedOptions {
   onMessage?: (msg: WsMessage) => void;
   enabled?: boolean;
 }
 
 /**
- * Intenta refrescar el access token usando el refresh token del store.
- * Devuelve true si el refresh fue exitoso.
+ * Feed WebSocket del panel admin (doc §9.2 — canal `/ws/admin/pedidos`).
+ *
+ * El staff (ADMIN / PEDIDOS) recibe TODOS los eventos de pedidos automáticamente
+ * vía las rooms de rol, sin suscribirse a pedidos puntuales. Igual que
+ * `useOrderStatusWS`: auth por `?token=`, refresh en cierre 4001 y reconexión
+ * exponencial. Reporta el estado de conexión al `wsStore`.
  */
 async function tryRefreshToken(): Promise<boolean> {
   const { refreshToken, setTokens, logout } = useAuthStore.getState();
@@ -39,7 +32,7 @@ async function tryRefreshToken(): Promise<boolean> {
       logout();
       return false;
     }
-    const data = await res.json() as { access_token: string; refresh_token: string };
+    const data = (await res.json()) as { access_token: string; refresh_token: string };
     setTokens(data.access_token, data.refresh_token);
     return true;
   } catch {
@@ -47,34 +40,11 @@ async function tryRefreshToken(): Promise<boolean> {
   }
 }
 
-/**
- * Hook que gestiona una conexión WebSocket persistente con el backend.
- *
- * AUTENTICACIÓN
- * El JWT se pasa como query param ?token=<accessToken> según la spec TPI v6.0.
- * El token se lee del authStore en cada intento de conexión, por lo que un
- * refresh de token se aplica automáticamente en el siguiente reintento.
- * Si no hay token (usuario no logueado), no se abre ninguna conexión.
- *
- * CLOSE CODES
- * 4001 — token expirado: el hook llama al interceptor de refresh y reconecta.
- * 1008 — token inválido/malformado: no se reintenta.
- * 1000 — cierre limpio: no se reintenta.
- *
- * ROOMS
- * Al conectarse el backend une el socket a "role:{rol}" de forma automática.
- * Para recibir eventos de un pedido específico llamar a subscribeToOrder(id).
- *
- * RECONEXIÓN CON BACKOFF EXPONENCIAL
- * Si la conexión cae por cualquier razón distinta a 1000/1008, reintenta con:
- *   intento 1 → 2 s, intento 2 → 4 s ... máximo 30 s.
- */
-export function useOrderStatusWS({
+export function useAdminOrdersFeed({
   onMessage,
   enabled = true,
-}: UseOrderStatusWSOptions = {}) {
+}: UseAdminOrdersFeedOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
-
   const onMessageRef = useRef(onMessage);
   useEffect(() => {
     onMessageRef.current = onMessage;
@@ -102,9 +72,8 @@ export function useOrderStatusWS({
       const token = useAuthStore.getState().accessToken;
       if (!token) return;
 
-      const wsUrl = `${WS_BASE}?token=${encodeURIComponent(token)}`;
       useWsStore.getState().connecting();
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(`${WS_ADMIN_BASE}?token=${encodeURIComponent(token)}`);
       currentWs = ws;
       wsRef.current = ws;
 
@@ -127,7 +96,7 @@ export function useOrderStatusWS({
       };
 
       ws.onerror = () => {
-        // Los errores siempre van seguidos de onclose; toda la lógica va ahí.
+        // onclose maneja la lógica de reconexión.
       };
 
       ws.onclose = (e) => {
@@ -136,10 +105,10 @@ export function useOrderStatusWS({
         useWsStore.getState().disconnect();
 
         const wasClean    = e.code === 1000;
-        const wasRejected = e.code === 1008; // token inválido, no retry
-        const wasExpired  = e.code === 4001; // token expirado, refresh y retry
+        const wasForbidden = e.code === 4003; // sin rol staff, no reintentar
+        const wasExpired  = e.code === 4001;  // token expirado → refresh y retry
 
-        if (cancelled || wasClean || wasRejected) return;
+        if (cancelled || wasClean || wasForbidden) return;
 
         if (wasExpired) {
           tryRefreshToken().then((ok) => {
@@ -163,22 +132,4 @@ export function useOrderStatusWS({
       wsRef.current = null;
     };
   }, [enabled]);
-
-  const subscribeToOrder = useCallback((orderId: number) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({ action: "subscribe-order", order_id: orderId })
-      );
-    }
-  }, []);
-
-  const unsubscribeFromOrder = useCallback((orderId: number) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({ action: "unsubscribe-order", order_id: orderId })
-      );
-    }
-  }, []);
-
-  return { subscribeToOrder, unsubscribeFromOrder };
 }

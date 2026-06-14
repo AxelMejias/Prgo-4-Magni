@@ -80,9 +80,10 @@ export interface ProductoListItem {
   nombre: string;
   descripcion?: string;
   image_url?: string | null;
-  precio: number;
+  precio_base: number;
   margen_ganancia: number;
   costo_total_insumos: number;
+  stock_cantidad: number;
   disponible: boolean;
   destacado: boolean;
   categorias: Categoria[];

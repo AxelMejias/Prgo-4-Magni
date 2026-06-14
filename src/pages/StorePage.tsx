@@ -117,8 +117,8 @@ export default function StorePage() {
   const sortedItems = useMemo(() => {
     if (!data?.items) return [];
     const items = [...data.items];
-    if (sortParam === "precio_asc")  return items.sort((a, b) => toNumber(a.precio) - toNumber(b.precio));
-    if (sortParam === "precio_desc") return items.sort((a, b) => toNumber(b.precio) - toNumber(a.precio));
+    if (sortParam === "precio_asc")  return items.sort((a, b) => toNumber(a.precio_base) - toNumber(b.precio_base));
+    if (sortParam === "precio_desc") return items.sort((a, b) => toNumber(b.precio_base) - toNumber(a.precio_base));
     if (sortParam === "nombre")      return items.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
     return items;
   }, [data?.items, sortParam]);
@@ -210,13 +210,13 @@ export default function StorePage() {
 
   function handleAdd(p: ProductoListItem, e: React.MouseEvent) {
     e.stopPropagation();
-    addItem({ producto_id: p.id, nombre: p.nombre, precio: toNumber(p.precio), image_url: p.image_url ?? undefined });
+    addItem({ producto_id: p.id, nombre: p.nombre, precio: toNumber(p.precio_base), image_url: p.image_url ?? undefined });
     showToast(p.nombre);
   }
 
   function handleAddFromDetail() {
     if (!detail) return;
-    addItem({ producto_id: detail.id, nombre: detail.nombre, precio: toNumber(detail.precio), image_url: detail.image_url ?? undefined });
+    addItem({ producto_id: detail.id, nombre: detail.nombre, precio: toNumber(detail.precio_base), image_url: detail.image_url ?? undefined });
     showToast(detail.nombre);
     closeDetail();
   }
@@ -329,7 +329,7 @@ export default function StorePage() {
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
+                        <span className="font-bold text-brand-700">{formatARS(p.precio_base)}</span>
                         {canBuy && (
                           <button
                             onClick={(e) => {
@@ -510,7 +510,7 @@ export default function StorePage() {
                       </p>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
+                      <span className="font-bold text-brand-700">{formatARS(p.precio_base)}</span>
                       {canBuy && (
                         <button
                           onClick={(e) => {
@@ -627,7 +627,7 @@ export default function StorePage() {
                       )}
                     </div>
                     <span className="text-2xl font-bold text-brand-700 whitespace-nowrap">
-                      {formatARS(detail.precio)}
+                      {formatARS(detail.precio_base)}
                     </span>
                   </div>
 
@@ -689,7 +689,7 @@ export default function StorePage() {
                       }`}
                     >
                       {tieneStock(detail.insumos)
-                        ? `Agregar al carrito — ${formatARS(detail.precio)}`
+                        ? `Agregar al carrito — ${formatARS(detail.precio_base)}`
                         : "Sin stock disponible"}
                     </button>
                   )}

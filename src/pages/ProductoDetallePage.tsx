@@ -101,7 +101,7 @@ export default function ProductoDetallePage() {
           <div className="text-right shrink-0">
             <p className="text-xs text-surface-400 mb-1 uppercase font-bold tracking-wider">Precio</p>
             <span className="text-3xl font-bold text-success-600">
-              {formatARS(Number(producto.precio))}
+              {formatARS(Number(producto.precio_base))}
             </span>
             <p className="text-xs text-surface-400 mt-1">
               Costo: {formatARS(Number(producto.costo_total_insumos))}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCartStore } from "../features/cart/model/cartStore";
+import { useCheckoutStore, type TipoEntrega } from "../shared/store/checkoutStore";
 import { pedidoApi } from "../entities/pedido/api";
 import { direccionApi, type Direccion } from "../entities/direccion/api";
 import { formatARS } from "../shared/lib/format";
@@ -10,16 +11,19 @@ import type { InsumoFaltante } from "../types";
 
 const COSTO_ENVIO = 50;
 
-type TipoEntrega = "retiro" | "domicilio";
-
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clear);
 
-  const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>("retiro");
-  const [direccionId, setDireccionId] = useState<number | "">("");
-  const [formaPago, setFormaPago] = useState("");
+  // Selección del checkout persistida (sobrevive el redirect a MercadoPago).
+  const tipoEntrega   = useCheckoutStore((s) => s.tipoEntrega);
+  const setTipoEntrega = useCheckoutStore((s) => s.setTipoEntrega);
+  const direccionId   = useCheckoutStore((s) => s.direccionId);
+  const setDireccionId = useCheckoutStore((s) => s.setDireccionId);
+  const formaPago     = useCheckoutStore((s) => s.formaPago);
+  const setFormaPago  = useCheckoutStore((s) => s.setFormaPago);
+
   const [notas, setNotas] = useState("");
   const [formError, setFormError] = useState("");
   const [faltantes, setFaltantes] = useState<InsumoFaltante[]>([]);

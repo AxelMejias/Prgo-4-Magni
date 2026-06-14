@@ -126,7 +126,7 @@ export default function InicioPage() {
                   </p>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
+                  <span className="font-bold text-brand-700">{formatARS(p.precio_base)}</span>
                   <span className="text-xs font-semibold text-brand-500">Ver detalle →</span>
                 </div>
               </article>

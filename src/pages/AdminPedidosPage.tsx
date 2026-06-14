@@ -5,7 +5,9 @@ import { pedidoApi } from "../entities/pedido/api";
 import type { EstadoCodigo, PedidoFilters } from "../entities/pedido/model";
 import EstadoBadge from "../features/pedido-estado/ui/EstadoBadge";
 import { formatARS, formatDateTime } from "../shared/lib/format";
-import { useOrderStatusWS, type WsMessage } from "../shared/hooks/useOrderStatus";
+import { useAdminOrdersFeed } from "../shared/hooks/useAdminOrdersFeed";
+import type { WsMessage } from "../shared/hooks/useOrderStatus";
+import WsStatusBadge from "../shared/ui/WsStatusBadge";
 import { useAuthStore } from "../shared/store/authStore";
 
 const PAGE_SIZE = 15;
@@ -33,11 +35,11 @@ export default function AdminPedidosPage() {
   const queryClient    = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // ── WebSocket: invalida la lista cuando llega cualquier evento de pedido
-  useOrderStatusWS({
+  // ── WebSocket (canal admin): invalida la lista ante cualquier evento de pedido
+  useAdminOrdersFeed({
     enabled: isAuthenticated,
     onMessage: useCallback(
-      (msg: WsMessage) => {
+      (_msg: WsMessage) => {
         // WS_CONNECTED es sintético del hook; cualquier otro evento es del backend
         queryClient.invalidateQueries({ queryKey: ["pedidos"] });
       },
@@ -79,6 +81,9 @@ export default function AdminPedidosPage() {
           <p className="text-sm text-surface-500">
             Vista de cajero — avanzá los estados del flujo.
           </p>
+          <div className="mt-2">
+            <WsStatusBadge />
+          </div>
         </div>
         {data && (
           <div className="text-right">
