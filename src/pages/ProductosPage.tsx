@@ -25,6 +25,7 @@ export default function ProductosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
+  const canStock = useAuthStore((s) => s.hasRole(["ADMIN", "STOCK"]));
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get("tab") as Tab) ?? "activos";
@@ -154,6 +155,25 @@ export default function ProductosPage() {
     mutationFn: (id: number) => productosApi.reactivar(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
   });
+
+  const stockMutation = useMutation({
+    mutationFn: ({ id, stock_cantidad }: { id: number; stock_cantidad: number }) =>
+      productosApi.setStock(id, stock_cantidad),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["productos"] }),
+    onError: (err: Error) => alert(err.message),
+  });
+
+  // Editar stock de un producto (rol ADMIN / STOCK).
+  function handleEditStock(prod: ProductoListItem) {
+    const raw = window.prompt(`Stock de "${prod.nombre}"`, String(prod.stock_cantidad));
+    if (raw === null) return;
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value < 0) {
+      alert("El stock debe ser un entero ≥ 0.");
+      return;
+    }
+    stockMutation.mutate({ id: prod.id, stock_cantidad: value });
+  }
 
   // ── Helpers de URL ─────────────────────────────────────────────────────────
   function setCurrentPage(updater: number | ((p: number) => number)) {
@@ -508,6 +528,33 @@ export default function ProductosPage() {
                         <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-success-50 text-success-700">
                           ${Number(prod.precio_base).toLocaleString("es-AR")}
                         </span>
+                        <div className="mt-1">
+                          {canStock ? (
+                            <button
+                              onClick={() => handleEditStock(prod)}
+                              disabled={stockMutation.isPending}
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer hover:ring-1 hover:ring-brand-300 ${
+                                prod.stock_cantidad > 0
+                                  ? "bg-surface-100 text-surface-600"
+                                  : "bg-danger-50 text-danger-600"
+                              }`}
+                              title="Editar stock (rol STOCK / ADMIN)"
+                            >
+                              Stock: {prod.stock_cantidad} ✏️
+                            </button>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                prod.stock_cantidad > 0
+                                  ? "bg-surface-100 text-surface-600"
+                                  : "bg-danger-50 text-danger-600"
+                              }`}
+                              title="Stock del producto"
+                            >
+                              Stock: {prod.stock_cantidad}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="text-xs font-semibold text-surface-500">

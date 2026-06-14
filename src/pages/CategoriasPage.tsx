@@ -180,7 +180,7 @@ export default function CategoriasPage() {
 
   function openEdit(c: Categoria) {
     setEditing(c);
-    setForm({ nombre: c.nombre, descripcion: c.descripcion ?? "", parent_id: c.parent_id ?? null });
+    setForm({ nombre: c.nombre, descripcion: c.descripcion ?? "", parent_id: c.parent_id ?? null, imagen_url: c.imagen_url ?? "" });
     setError("");
     setModalOpen(true);
   }
@@ -206,6 +206,7 @@ export default function CategoriasPage() {
       nombre: form.nombre.trim(),
       descripcion: form.descripcion?.trim() || undefined,
       parent_id: form.parent_id || null,
+      imagen_url: form.imagen_url?.trim() || null,
     };
     if (editing) {
       updateMutation.mutate({ id: editing.id, payload });
@@ -314,6 +315,27 @@ export default function CategoriasPage() {
               rows={2}
               className="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-surface-700 mb-1">
+              URL de imagen <span className="text-surface-400">(Cloudinary, opcional)</span>
+            </label>
+            <input
+              type="url"
+              value={form.imagen_url ?? ""}
+              onChange={(e) => setForm({ ...form, imagen_url: e.target.value })}
+              placeholder="https://res.cloudinary.com/..."
+              className="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            {form.imagen_url ? (
+              <img
+                src={form.imagen_url}
+                alt="Vista previa"
+                className="mt-2 h-20 w-20 object-cover rounded-lg border border-surface-200"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            ) : null}
           </div>
 
           <div>
