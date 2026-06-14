@@ -15,7 +15,6 @@ const TABS: { value: EstadoCodigo | ""; label: string }[] = [
   { value: "PENDIENTE",  label: "Pendientes" },
   { value: "CONFIRMADO", label: "Confirmados" },
   { value: "EN_PREP",    label: "En prep." },
-  { value: "EN_CAMINO",  label: "En camino" },
   { value: "ENTREGADO",  label: "Entregados" },
   { value: "CANCELADO",  label: "Cancelados" },
 ];
@@ -39,13 +38,8 @@ export default function AdminPedidosPage() {
     enabled: isAuthenticated,
     onMessage: useCallback(
       (msg: WsMessage) => {
-        if (
-          msg.event === "WS_CONNECTED" ||
-          msg.event === "NUEVO_PEDIDO" ||
-          msg.event.startsWith("PEDIDO_")
-        ) {
-          queryClient.invalidateQueries({ queryKey: ["pedidos"] });
-        }
+        // WS_CONNECTED es sintético del hook; cualquier otro evento es del backend
+        queryClient.invalidateQueries({ queryKey: ["pedidos"] });
       },
       [queryClient]
     ),

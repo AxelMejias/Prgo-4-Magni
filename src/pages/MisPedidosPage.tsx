@@ -11,11 +11,9 @@ import { useAuthStore } from "../shared/store/authStore";
 const PAGE_SIZE = 10;
 const ESTADOS: { codigo: EstadoCodigo | ""; label: string }[] = [
   { codigo: "", label: "Todos" },
-  { codigo: "ESPERANDO_PAGO", label: "Esperando pago" },
   { codigo: "PENDIENTE",  label: "Pendientes" },
   { codigo: "CONFIRMADO", label: "Confirmados" },
   { codigo: "EN_PREP",    label: "En preparación" },
-  { codigo: "EN_CAMINO",  label: "En camino" },
   { codigo: "ENTREGADO",  label: "Entregados" },
   { codigo: "CANCELADO",  label: "Cancelados" },
 ];
@@ -39,12 +37,13 @@ export default function MisPedidosPage() {
     onMessage: useCallback(
       (msg: WsMessage) => {
         if (msg.event === "WS_CONNECTED") {
-          // Recargá la lista y suscribite a los pedidos activos conocidos
+          // Al conectar: recargar lista y suscribirse a pedidos activos
           queryClient.invalidateQueries({ queryKey: ["mis-pedidos"] });
           dataRef.current?.items
             .filter((p) => !TERMINAL_ESTADOS.has(p.estado_codigo))
             .forEach((p) => subscribeRef.current(p.id));
-        } else if (msg.event === "NUEVO_PEDIDO" || msg.event.startsWith("PEDIDO_")) {
+        } else {
+          // estado_cambiado / pedido_cancelado / pago_confirmado → recargar
           queryClient.invalidateQueries({ queryKey: ["mis-pedidos"] });
         }
       },
@@ -139,7 +138,11 @@ export default function MisPedidosPage() {
 
       <div className="space-y-3">
         {data?.items.map((pedido) => {
-          const esperandoPago = pedido.estado_codigo === "ESPERANDO_PAGO";
+          // Un pedido MERCADOPAGO que sigue PENDIENTE = pago aún no confirmado
+          // (el pago aprobado lo avanza a CONFIRMADO).
+          const esperandoPago =
+            pedido.estado_codigo === "PENDIENTE" &&
+            pedido.forma_pago_codigo === "MERCADOPAGO";
           return (
             <Link
               key={pedido.id}

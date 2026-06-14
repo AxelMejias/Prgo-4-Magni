@@ -6,7 +6,14 @@ const WS_BASE = _apiUrl.replace(/^http/, "ws") + "/ws/pedidos";
 
 export interface WsMessage {
   event: string;
-  data: unknown;
+  pedido_id?: number;
+  estado_anterior?: string | null;
+  estado_nuevo?: string;
+  usuario_id?: number | null;
+  motivo?: string | null;
+  timestamp?: string;
+  // synthetic (generado por el hook, no viene del servidor)
+  data?: unknown;
 }
 
 interface UseOrderStatusWSOptions {

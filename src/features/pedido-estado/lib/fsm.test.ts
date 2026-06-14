@@ -31,15 +31,11 @@ describe("TRANSICIONES_STAFF", () => {
     expect(TRANSICIONES_STAFF.CONFIRMADO).toHaveLength(2);
   });
 
-  it("EN_PREP puede ir a EN_CAMINO y CANCELADO", () => {
+  it("EN_PREP puede ir a ENTREGADO y CANCELADO", () => {
     expect(TRANSICIONES_STAFF.EN_PREP).toEqual(
-      expect.arrayContaining(["EN_CAMINO", "CANCELADO"])
+      expect.arrayContaining(["ENTREGADO", "CANCELADO"])
     );
     expect(TRANSICIONES_STAFF.EN_PREP).toHaveLength(2);
-  });
-
-  it("EN_CAMINO solo puede ir a ENTREGADO", () => {
-    expect(TRANSICIONES_STAFF.EN_CAMINO).toEqual(["ENTREGADO"]);
   });
 
   it("ENTREGADO es estado terminal — sin transiciones", () => {
@@ -65,10 +61,6 @@ describe("TRANSICIONES_CLIENT", () => {
 
   it("EN_PREP → sin opciones (no puede cancelar una vez en preparación)", () => {
     expect(TRANSICIONES_CLIENT.EN_PREP).toHaveLength(0);
-  });
-
-  it("EN_CAMINO → sin opciones", () => {
-    expect(TRANSICIONES_CLIENT.EN_CAMINO).toHaveLength(0);
   });
 
   it("ENTREGADO → sin opciones", () => {
@@ -119,8 +111,8 @@ describe("getNextStates", () => {
       expect(getNextStates("EN_PREP", false)).toHaveLength(0);
     });
 
-    it("retorna [] para EN_CAMINO", () => {
-      expect(getNextStates("EN_CAMINO", false)).toHaveLength(0);
+    it("retorna [] para ENTREGADO", () => {
+      expect(getNextStates("ENTREGADO", false)).toHaveLength(0);
     });
   });
 });
@@ -141,10 +133,6 @@ describe("requiereMotivo", () => {
     expect(requiereMotivo("EN_PREP")).toBe(false);
   });
 
-  it("devuelve false para EN_CAMINO", () => {
-    expect(requiereMotivo("EN_CAMINO")).toBe(false);
-  });
-
   it("devuelve false para ENTREGADO", () => {
     expect(requiereMotivo("ENTREGADO")).toBe(false);
   });
@@ -163,7 +151,6 @@ describe("ESTADO_LABELS", () => {
       "PENDIENTE",
       "CONFIRMADO",
       "EN_PREP",
-      "EN_CAMINO",
       "ENTREGADO",
       "CANCELADO",
     ] as const;

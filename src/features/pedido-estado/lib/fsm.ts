@@ -6,21 +6,17 @@ import type { EstadoCodigo } from "../../../entities/pedido/model";
  * habilitar/deshabilitar botones en la UI antes de pegarle al API.
  */
 export const TRANSICIONES_STAFF: Record<EstadoCodigo, EstadoCodigo[]> = {
-  ESPERANDO_PAGO: ["PENDIENTE", "CANCELADO"],
   PENDIENTE:  ["CONFIRMADO", "CANCELADO"],
   CONFIRMADO: ["EN_PREP", "CANCELADO"],
-  EN_PREP:    ["EN_CAMINO", "CANCELADO"],
-  EN_CAMINO:  ["ENTREGADO"],
+  EN_PREP:    ["ENTREGADO", "CANCELADO"],
   ENTREGADO:  [],
   CANCELADO:  [],
 };
 
 export const TRANSICIONES_CLIENT: Record<EstadoCodigo, EstadoCodigo[]> = {
-  ESPERANDO_PAGO: ["CANCELADO"],
   PENDIENTE:  ["CANCELADO"],
   CONFIRMADO: ["CANCELADO"],
   EN_PREP:    [],
-  EN_CAMINO:  [],
   ENTREGADO:  [],
   CANCELADO:  [],
 };
@@ -40,11 +36,9 @@ export function requiereMotivo(destino: EstadoCodigo): boolean {
 }
 
 export const ESTADO_LABELS: Record<EstadoCodigo, string> = {
-  ESPERANDO_PAGO: "Esperando pago",
   PENDIENTE:  "Pendiente",
   CONFIRMADO: "Confirmado",
   EN_PREP:    "En preparación",
-  EN_CAMINO:  "En camino",
   ENTREGADO:  "Entregado",
   CANCELADO:  "Cancelado",
 };

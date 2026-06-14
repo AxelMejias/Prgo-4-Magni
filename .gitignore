@@ -34,3 +34,7 @@ Parcial 1 terminado/
 
 # Vite / Vitest temp files
 *.timestamp-*.mjs
+
+# Trabajo local (no versionar)
+*.log
+/.local/

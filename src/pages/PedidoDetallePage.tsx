@@ -32,7 +32,8 @@ export default function PedidoDetallePage() {
         if (msg.event === "WS_CONNECTED") {
           // Para clientes: suscribirse a la room específica del pedido
           subscribeRef.current(pedidoId);
-        } else if (msg.event === "NUEVO_PEDIDO" || msg.event.startsWith("PEDIDO_")) {
+        } else if (msg.pedido_id === pedidoId || !msg.pedido_id) {
+          // estado_cambiado / pedido_cancelado / pago_confirmado → recargar detalle
           queryClient.invalidateQueries({
             queryKey: ["pedidos", "detalle", pedidoId],
           });
@@ -225,8 +226,10 @@ export default function PedidoDetallePage() {
         </div>
       </section>
 
-      {/* Completar pago — solo para ESPERANDO_PAGO con init_point disponible */}
-      {pedido.estado_codigo === "ESPERANDO_PAGO" && pedido.init_point && (
+      {/* Completar pago — pedido MERCADOPAGO aún PENDIENTE con init_point disponible */}
+      {pedido.estado_codigo === "PENDIENTE" &&
+        pedido.forma_pago_codigo === "MERCADOPAGO" &&
+        pedido.init_point && (
         <section className="bg-warning-50 rounded-2xl border border-warning-200 p-6 space-y-3">
           <h2 className="font-bold text-warning-800">Pago pendiente</h2>
           <p className="text-sm text-warning-700">
