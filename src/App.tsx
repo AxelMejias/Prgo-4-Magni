@@ -28,6 +28,7 @@ import PedidoExitosoPage from "./pages/PedidoExitosoPage";
 // Admin Pedidos (Staff)
 import AdminPedidosPage from "./pages/AdminPedidosPage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
+import DashboardPage from "./pages/DashboardPage";
 function SmartRedirect() {
   const hasRole = useAuthStore((s) => s.hasRole);
   if (hasRole(["ADMIN", "STOCK"])) return <Navigate to="/productos" replace />;
@@ -81,8 +82,9 @@ export default function App() {
                 <Route path="/admin/pedidos/:id" element={<PedidoDetallePage />} />
               </Route>
 
-              {/* Admin Usuarios — ADMIN */}
+              {/* Admin Usuarios + Dashboard — ADMIN */}
               <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+                <Route path="/admin/dashboard" element={<DashboardPage />} />
                 <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
                 <Route path="/categorias"     element={<CategoriasPage />} />
               </Route>

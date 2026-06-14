@@ -330,7 +330,22 @@ export default function StorePage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-brand-700">{formatARS(p.precio)}</span>
-                        <span className="text-xs font-semibold text-brand-500">Ver detalle →</span>
+                        {canBuy && (
+                          <button
+                            onClick={(e) => {
+                              if (!tieneStock(p.insumos)) { e.stopPropagation(); return; }
+                              handleAdd(p, e);
+                            }}
+                            disabled={!tieneStock(p.insumos)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                              tieneStock(p.insumos)
+                                ? "bg-brand-600 text-white hover:bg-brand-700 cursor-pointer"
+                                : "bg-surface-100 text-surface-400 cursor-not-allowed"
+                            }`}
+                          >
+                            Agregar
+                          </button>
+                        )}
                       </div>
                     </article>
                   ))}

@@ -75,6 +75,7 @@ export default function CheckoutPage() {
   function handleTipoEntrega(tipo: TipoEntrega) {
     setTipoEntrega(tipo);
     setDireccionId("");
+    if (tipo === "domicilio" && formaPago === "EFECTIVO") setFormaPago("");
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -248,7 +249,7 @@ export default function CheckoutPage() {
             ) : (
               <div className="space-y-2">
                 {formasPago
-                  ?.filter((fp) => fp.habilitado)
+                  ?.filter((fp) => fp.habilitado && !(tipoEntrega === "domicilio" && fp.codigo === "EFECTIVO"))
                   .sort((a, b) => {
                     const orden: Record<string, number> = { TRANSFERENCIA: 0, EFECTIVO: 1 };
                     return (orden[a.codigo] ?? 99) - (orden[b.codigo] ?? 99);

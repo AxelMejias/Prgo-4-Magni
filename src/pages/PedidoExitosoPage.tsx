@@ -19,15 +19,18 @@ export default function PedidoExitosoPage() {
   const isPending  = mpStatus === "pending" || mpStatus === "in_process";
   const isFailure  = !isApproved && !isPending;
 
-  // Approved: activar overlay en StoreLayout ANTES de navegar, así no hay flash.
+  // Approved: esperar confirmación del backend antes de navegar
   useEffect(() => {
     if (!isApproved || confirmedRef.current) return;
     confirmedRef.current = true;
     clearCart();
     if (pedidoId) {
       showPaymentOverlay(paymentId ?? undefined);
-      pedidoApi.confirmarPagoMp(Number(pedidoId)).catch(() => {});
-      navigate(`/mis-pedidos/${pedidoId}`, { replace: true });
+      pedidoApi.confirmarPagoMp(Number(pedidoId))
+        .catch(() => {})
+        .finally(() => {
+          navigate(`/mis-pedidos/${pedidoId}`, { replace: true });
+        });
     } else {
       navigate("/mis-pedidos", { replace: true });
     }

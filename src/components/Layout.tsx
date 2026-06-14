@@ -4,6 +4,15 @@ import { authApi } from "../shared/api/authApi";
 
 // Cada item define qué roles pueden verlo.
 const navItems = [
+  // ── Dashboard — solo ADMIN ───────────────────────────────────────────
+  {
+    to: "/admin/dashboard",
+    label: "Dashboard",
+    icon: "📊",
+    color: "bg-indigo-600",
+    roles: ["ADMIN"],
+  },
+
   // ── Admin Pedidos (Caja / Empleado) ─────────────────────────────────
   {
     to: "/admin/pedidos",
