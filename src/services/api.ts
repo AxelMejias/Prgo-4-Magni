@@ -285,7 +285,7 @@ export const productosApi = {
     const token = useAuthStore.getState().accessToken;
     const form = new FormData();
     form.append("archivo", file);
-    const response = await fetch(`${BASE}/api/v1/productos/upload-image`, {
+    const response = await fetch(`${BASE}/api/v1/uploads/imagen`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       credentials: "include",
@@ -296,6 +296,6 @@ export const productosApi = {
       throw new Error(body?.detail?.detail || body?.detail || `Error ${response.status}`);
     }
     const data = await response.json();
-    return data.image_url;
+    return data.secure_url;
   },
 };
