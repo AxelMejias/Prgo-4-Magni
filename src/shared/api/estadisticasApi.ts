@@ -19,6 +19,8 @@ export interface DashboardData {
   ticket_promedio: number;
   productos_mas_vendidos: ProductoMasVendido[];
   ventas_por_dia: VentasPorDia[];
+  pedidos_por_estado: { estado_codigo: string; cantidad: number }[];
+  ingresos_por_forma_pago: { forma_pago: string; total: number; cantidad_pedidos: number }[];
 }
 
 export const estadisticasApi = {

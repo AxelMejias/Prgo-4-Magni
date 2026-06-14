@@ -3,9 +3,21 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line,
+  PieChart, Pie, Cell,
 } from "recharts";
 import { estadisticasApi } from "../shared/api/estadisticasApi";
 import { formatARS } from "../shared/lib/format";
+
+const ESTADO_COLORS: Record<string, string> = {
+  PENDIENTE: "#f59e0b",
+  CONFIRMADO: "#3b82f6",
+  EN_PREP: "#8b5cf6",
+  EN_CAMINO: "#06b6d4",
+  ENTREGADO: "#10b981",
+  CANCELADO: "#ef4444",
+  ESPERANDO_PAGO: "#9ca3af",
+};
+const DEFAULT_COLOR = "#6366f1";
 
 function toLocalDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -178,6 +190,83 @@ export default function DashboardPage() {
               </table>
             </div>
           )}
+
+          {/* ── Fila 5: distribución estados + ingresos por forma pago ────── */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* PieChart: distribución por estado */}
+            <div className="bg-white border border-surface-200 rounded-2xl p-5">
+              <h2 className="font-bold text-surface-900 text-sm mb-0.5">Distribución por estado</h2>
+              <p className="text-xs text-surface-400 mb-4">Cantidad de pedidos en cada estado.</p>
+              {data.pedidos_por_estado.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={data.pedidos_por_estado.map((e) => ({
+                        name: e.estado_codigo,
+                        value: e.cantidad,
+                      }))}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={75}
+                      label={({ name, percent }) =>
+                        percent > 0.05 ? `${name.replace("_", " ")} ${(percent * 100).toFixed(0)}%` : ""
+                      }
+                      labelLine={false}
+                    >
+                      {data.pedidos_por_estado.map((e) => (
+                        <Cell
+                          key={e.estado_codigo}
+                          fill={ESTADO_COLORS[e.estado_codigo] ?? DEFAULT_COLOR}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => [v, "Pedidos"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-surface-400 text-sm text-center py-8">Sin pedidos registrados.</p>
+              )}
+            </div>
+
+            {/* BarChart horizontal: ingresos por forma de pago */}
+            <div className="bg-white border border-surface-200 rounded-2xl p-5">
+              <h2 className="font-bold text-surface-900 text-sm mb-0.5">Ingresos por forma de pago</h2>
+              <p className="text-xs text-surface-400 mb-4">Solo pagos aprobados en el período, en ARS.</p>
+              {data.ingresos_por_forma_pago.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart
+                    layout="vertical"
+                    data={data.ingresos_por_forma_pago}
+                    margin={{ top: 4, right: 16, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="forma_pago"
+                      tick={{ fontSize: 10 }}
+                      width={95}
+                    />
+                    <Tooltip
+                      formatter={(value: number, _name: string, entry) => [
+                        `${formatARS(value)} (${entry.payload.cantidad_pedidos} pedidos)`,
+                        "Ingreso",
+                      ]}
+                    />
+                    <Bar dataKey="total" fill="#10b981" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-surface-400 text-sm text-center py-8">Sin datos para el período.</p>
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>
