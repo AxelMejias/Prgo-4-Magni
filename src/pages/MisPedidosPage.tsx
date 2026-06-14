@@ -5,7 +5,7 @@ import { pedidoApi } from "../entities/pedido/api";
 import type { EstadoCodigo, PaginatedPedidos } from "../entities/pedido/model";
 import EstadoBadge from "../features/pedido-estado/ui/EstadoBadge";
 import { formatARS, formatDateTime, toNumber } from "../shared/lib/format";
-import { useWebSocket, type WsMessage } from "../shared/hooks/useWebSocket";
+import { useOrderStatusWS, type WsMessage } from "../shared/hooks/useOrderStatus";
 import { useAuthStore } from "../shared/store/authStore";
 
 const PAGE_SIZE = 10;
@@ -34,7 +34,7 @@ export default function MisPedidosPage() {
   const dataRef      = useRef<PaginatedPedidos | undefined>(undefined);
   const subscribeRef = useRef<(id: number) => void>(() => {});
 
-  const { subscribeToOrder } = useWebSocket({
+  const { subscribeToOrder } = useOrderStatusWS({
     enabled: isAuthenticated,
     onMessage: useCallback(
       (msg: WsMessage) => {

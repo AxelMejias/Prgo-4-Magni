@@ -4,7 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { pedidoApi } from "../entities/pedido/api";
 import type { EstadoCodigo } from "../entities/pedido/model";
 import { useAuthStore } from "../shared/store/authStore";
-import { useWebSocket, type WsMessage } from "../shared/hooks/useWebSocket";
+import { useOrderStatusWS, type WsMessage } from "../shared/hooks/useOrderStatus";
 import EstadoBadge from "../features/pedido-estado/ui/EstadoBadge";
 import HistorialList from "../features/pedido-estado/ui/HistorialList";
 import {
@@ -25,7 +25,7 @@ export default function PedidoDetallePage() {
   // Ref para subscribeToOrder (evita closure vicio en el callback de WS)
   const subscribeRef = useRef<(id: number) => void>(() => {});
 
-  const { subscribeToOrder } = useWebSocket({
+  const { subscribeToOrder } = useOrderStatusWS({
     enabled: isAuthenticated && !!pedidoId,
     onMessage: useCallback(
       (msg: WsMessage) => {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, LineChart, Line,
   PieChart, Pie, Cell,
 } from "recharts";
@@ -134,67 +134,96 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* ── Fila 3: gráficos lado a lado ─────────────────────────────── */}
-          {ventasDia.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-surface-200 rounded-2xl p-5">
-                <h2 className="font-bold text-surface-900 text-sm mb-0.5">Ingresos por día</h2>
-                <p className="text-xs text-surface-400 mb-4">Solo pagos aprobados, en ARS.</p>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={ventasDia} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
-                    <Tooltip formatter={(value: number) => [formatARS(value), "Ingreso"]} labelFormatter={(l) => `Fecha: ${l}`} />
-                    <Bar dataKey="ingreso" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+          {/* ── Fila 3: ventas por período — LineChart con 2 líneas ──────── */}
+          <div className="bg-white border border-surface-200 rounded-2xl p-5">
+            <h2 className="font-bold text-surface-900 text-sm mb-0.5">Ventas por período</h2>
+            <p className="text-xs text-surface-400 mb-4">
+              Ingresos confirmados (ARS, eje izq.) y cantidad de pedidos (eje der.) por día.
+            </p>
+            {ventasDia.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={ventasDia} margin={{ top: 4, right: 24, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    width={48}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 10 }}
+                    allowDecimals={false}
+                    width={28}
+                  />
+                  <Tooltip
+                    formatter={(value: number, name: string) =>
+                      name === "ingreso"
+                        ? [formatARS(value), "Ingresos"]
+                        : [value, "Pedidos"]
+                    }
+                    labelFormatter={(l) => `Fecha: ${l}`}
+                  />
+                  <Legend formatter={(v) => (v === "ingreso" ? "Ingresos" : "Pedidos")} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="ingreso"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="pedidos"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-surface-400 text-sm text-center py-8">
+                Sin datos de ventas para el período seleccionado.
+              </p>
+            )}
+          </div>
 
-              <div className="bg-white border border-surface-200 rounded-2xl p-5">
-                <h2 className="font-bold text-surface-900 text-sm mb-0.5">Pedidos por día</h2>
-                <p className="text-xs text-surface-400 mb-4">Cantidad de pedidos completados por día.</p>
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={ventasDia} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={30} />
-                    <Tooltip formatter={(value: number) => [value, "Pedidos"]} />
-                    <Line type="monotone" dataKey="pedidos" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white border border-surface-200 rounded-2xl p-6 text-center text-surface-400 text-sm">
-              Sin datos de ventas para el período seleccionado.
-            </div>
-          )}
-
-          {/* ── Fila 4: top productos ─────────────────────────────────────── */}
+          {/* ── Fila 4: top productos — BarChart ─────────────────────────── */}
           {topProductos.length > 0 && (
             <div className="bg-white border border-surface-200 rounded-2xl p-5">
-              <h2 className="font-bold text-surface-900 mb-4">Productos más vendidos</h2>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs font-bold text-surface-500 uppercase tracking-wide border-b border-surface-100">
-                    <th className="pb-2 pr-4">#</th>
-                    <th className="pb-2 pr-4">Producto</th>
-                    <th className="pb-2 pr-4 text-right">Unidades</th>
-                    <th className="pb-2 text-right">Ingreso total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-50">
-                  {topProductos.map((p, i) => (
-                    <tr key={p.producto_id}>
-                      <td className="py-2 pr-4 text-surface-400 font-mono text-xs">{i + 1}</td>
-                      <td className="py-2 pr-4 font-medium text-surface-900">{p.nombre}</td>
-                      <td className="py-2 pr-4 text-right text-surface-700">{p.cantidad_total}</td>
-                      <td className="py-2 text-right font-semibold text-surface-900">{formatARS(p.ingreso_total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <h2 className="font-bold text-surface-900 text-sm mb-0.5">Productos más vendidos</h2>
+              <p className="text-xs text-surface-400 mb-4">Ingresos totales por producto. El tooltip muestra unidades vendidas.</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={topProductos.map((p) => ({
+                    nombre: p.nombre.length > 14 ? p.nombre.slice(0, 14) + "…" : p.nombre,
+                    ingreso: Number(p.ingreso_total),
+                    cantidad_vendida: p.cantidad_total,
+                  }))}
+                  margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="nombre" tick={{ fontSize: 10 }} />
+                  <YAxis
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    width={48}
+                  />
+                  <Tooltip
+                    formatter={(value: number, _name: string, entry) => [
+                      `${formatARS(value)} · ${entry.payload.cantidad_vendida} uds.`,
+                      "Ingreso",
+                    ]}
+                  />
+                  <Bar dataKey="ingreso" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
 

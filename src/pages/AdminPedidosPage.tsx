@@ -5,7 +5,7 @@ import { pedidoApi } from "../entities/pedido/api";
 import type { EstadoCodigo, PedidoFilters } from "../entities/pedido/model";
 import EstadoBadge from "../features/pedido-estado/ui/EstadoBadge";
 import { formatARS, formatDateTime } from "../shared/lib/format";
-import { useWebSocket, type WsMessage } from "../shared/hooks/useWebSocket";
+import { useOrderStatusWS, type WsMessage } from "../shared/hooks/useOrderStatus";
 import { useAuthStore } from "../shared/store/authStore";
 
 const PAGE_SIZE = 15;
@@ -35,7 +35,7 @@ export default function AdminPedidosPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // ── WebSocket: invalida la lista cuando llega cualquier evento de pedido
-  useWebSocket({
+  useOrderStatusWS({
     enabled: isAuthenticated,
     onMessage: useCallback(
       (msg: WsMessage) => {
