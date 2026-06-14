@@ -103,7 +103,7 @@ export default function DashboardPage() {
       {data && (
         <>
           {/* ── Fila 2: KPI cards ────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <KpiCard
               label="Ingresos confirmados"
               value={formatARS(data.ingreso_total)}
@@ -124,6 +124,13 @@ export default function DashboardPage() {
               icon="🧾"
               color="bg-warning-50 border-warning-200"
               valueColor="text-warning-700"
+            />
+            <KpiCard
+              label="Pedidos activos"
+              value={String(data.pedidos_activos)}
+              icon="🔄"
+              color="bg-purple-50 border-purple-200"
+              valueColor="text-purple-700"
             />
           </div>
 

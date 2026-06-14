@@ -17,6 +17,7 @@ export interface DashboardData {
   ingreso_total: number;
   pedidos_completados: number;
   ticket_promedio: number;
+  pedidos_activos: number;
   productos_mas_vendidos: ProductoMasVendido[];
   ventas_por_dia: VentasPorDia[];
   pedidos_por_estado: { estado_codigo: string; cantidad: number }[];
