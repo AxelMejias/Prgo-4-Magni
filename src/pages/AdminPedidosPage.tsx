@@ -15,7 +15,6 @@ const TABS: { value: EstadoCodigo | ""; label: string }[] = [
   { value: "PENDIENTE",  label: "Pendientes" },
   { value: "CONFIRMADO", label: "Confirmados" },
   { value: "EN_PREP",    label: "En prep." },
-  { value: "EN_CAMINO",  label: "En camino" },
   { value: "ENTREGADO",  label: "Entregados" },
   { value: "CANCELADO",  label: "Cancelados" },
 ];

@@ -225,8 +225,10 @@ export default function PedidoDetallePage() {
         </div>
       </section>
 
-      {/* Completar pago — solo para ESPERANDO_PAGO con init_point disponible */}
-      {pedido.estado_codigo === "ESPERANDO_PAGO" && pedido.init_point && (
+      {/* Completar pago — pedido MERCADOPAGO aún PENDIENTE con init_point disponible */}
+      {pedido.estado_codigo === "PENDIENTE" &&
+        pedido.forma_pago_codigo === "MERCADOPAGO" &&
+        pedido.init_point && (
         <section className="bg-warning-50 rounded-2xl border border-warning-200 p-6 space-y-3">
           <h2 className="font-bold text-warning-800">Pago pendiente</h2>
           <p className="text-sm text-warning-700">

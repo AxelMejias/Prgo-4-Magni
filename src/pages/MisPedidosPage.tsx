@@ -11,11 +11,9 @@ import { useAuthStore } from "../shared/store/authStore";
 const PAGE_SIZE = 10;
 const ESTADOS: { codigo: EstadoCodigo | ""; label: string }[] = [
   { codigo: "", label: "Todos" },
-  { codigo: "ESPERANDO_PAGO", label: "Esperando pago" },
   { codigo: "PENDIENTE",  label: "Pendientes" },
   { codigo: "CONFIRMADO", label: "Confirmados" },
   { codigo: "EN_PREP",    label: "En preparación" },
-  { codigo: "EN_CAMINO",  label: "En camino" },
   { codigo: "ENTREGADO",  label: "Entregados" },
   { codigo: "CANCELADO",  label: "Cancelados" },
 ];
@@ -139,7 +137,11 @@ export default function MisPedidosPage() {
 
       <div className="space-y-3">
         {data?.items.map((pedido) => {
-          const esperandoPago = pedido.estado_codigo === "ESPERANDO_PAGO";
+          // Un pedido MERCADOPAGO que sigue PENDIENTE = pago aún no confirmado
+          // (el pago aprobado lo avanza a CONFIRMADO).
+          const esperandoPago =
+            pedido.estado_codigo === "PENDIENTE" &&
+            pedido.forma_pago_codigo === "MERCADOPAGO";
           return (
             <Link
               key={pedido.id}

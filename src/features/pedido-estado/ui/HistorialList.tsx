@@ -11,26 +11,17 @@ function getEntryDisplay(h: HistorialEstado): { icon: string; label: string } {
   const desde = h.estado_desde;
 
   if (!desde) {
-    if (hacia === "ESPERANDO_PAGO") {
-      return { icon: "🛒", label: "Pedido creado — aguardando pago" };
-    }
     return { icon: "📋", label: `Pedido creado en ${ESTADO_LABELS[hacia] ?? hacia}` };
   }
 
-  if (desde === "ESPERANDO_PAGO" && hacia === "PENDIENTE") {
-    return { icon: "✅", label: "Pago confirmado" };
-  }
   if (hacia === "CANCELADO") {
     return { icon: "❌", label: `Cancelado (era: ${ESTADO_LABELS[desde] ?? desde})` };
   }
   if (hacia === "CONFIRMADO") {
-    return { icon: "👍", label: "Pedido confirmado por el local" };
+    return { icon: "✅", label: "Pedido confirmado" };
   }
   if (hacia === "EN_PREP") {
     return { icon: "👨‍🍳", label: "En preparación" };
-  }
-  if (hacia === "EN_CAMINO") {
-    return { icon: "🚚", label: "En camino" };
   }
   if (hacia === "ENTREGADO") {
     return { icon: "🎉", label: "Entregado" };

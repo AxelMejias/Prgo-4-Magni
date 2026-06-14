@@ -1,9 +1,8 @@
+// FSM v7 — exactamente 5 estados (sin EN_CAMINO ni ESPERANDO_PAGO).
 export type EstadoCodigo =
-  | "ESPERANDO_PAGO"
   | "PENDIENTE"
   | "CONFIRMADO"
   | "EN_PREP"
-  | "EN_CAMINO"
   | "ENTREGADO"
   | "CANCELADO";
 
