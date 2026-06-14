@@ -1,9 +1,10 @@
 import { useEffect, useRef, useCallback } from "react";
+import { useAuthStore } from "../store/authStore";
 
 // Deriva la URL WS de la misma variable que usa axiosClient, para no duplicar config.
 // http:// → ws://   |   https:// → wss://
 const _apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:8000") as string;
-const WS_URL = _apiUrl.replace(/^http/, "ws") + "/api/v1/pedidos/ws";
+const WS_BASE = _apiUrl.replace(/^http/, "ws") + "/ws/pedidos";
 
 export interface WsMessage {
   event: string;
@@ -19,10 +20,11 @@ interface UseWebSocketOptions {
  * Hook que gestiona una conexión WebSocket persistente con el backend.
  *
  * AUTENTICACIÓN
- * El backend autentica leyendo la cookie httpOnly "access_token" que el
- * navegador envía automáticamente en el handshake. No hay que pasar nada
- * manualmente. Si la cookie es inválida el servidor cierra con código 1008
- * y el hook NO reintenta (evita bucles inútiles).
+ * El JWT se pasa como query param ?token=<accessToken> según la spec TPI v6.0.
+ * El token se lee del authStore en cada intento de conexión, por lo que un
+ * refresh de token se aplica automáticamente en el siguiente reintento.
+ * Si no hay token (usuario no logueado), no se abre ninguna conexión.
+ * Si el servidor rechaza el token cierra con 1008 y el hook NO reintenta.
  *
  * ROOMS
  * Al conectarse el backend une el socket a "role:{rol}" de forma automática.
@@ -69,7 +71,11 @@ export function useWebSocket({
     const connect = () => {
       if (cancelled) return;
 
-      const ws = new WebSocket(WS_URL);
+      const token = useAuthStore.getState().accessToken;
+      if (!token) return; // sin sesión, no conectar
+
+      const wsUrl = `${WS_BASE}?token=${encodeURIComponent(token)}`;
+      const ws = new WebSocket(wsUrl);
       currentWs = ws;
       wsRef.current = ws;
 
