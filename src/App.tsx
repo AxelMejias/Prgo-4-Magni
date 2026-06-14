@@ -29,8 +29,11 @@ import PedidoExitosoPage from "./pages/PedidoExitosoPage";
 import AdminPedidosPage from "./pages/AdminPedidosPage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 import DashboardPage from "./pages/DashboardPage";
-function SmartRedirect() {
+function RootRedirect() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasRole = useAuthStore((s) => s.hasRole);
+  // Anónimo → tienda pública (catálogo navegable sin login, doc §5.2 / OBJ-01).
+  if (!isAuthenticated)            return <Navigate to="/store" replace />;
   if (hasRole(["ADMIN", "STOCK"])) return <Navigate to="/productos" replace />;
   if (hasRole(["PEDIDOS"]))        return <Navigate to="/admin/pedidos" replace />;
   return <Navigate to="/store" replace />;
@@ -54,27 +57,28 @@ export default function App() {
           <Route path="/login"            element={<LoginPage />} />
           <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
           <Route path="/reset-password"   element={<ResetPasswordPage />} />
-          {/* ── Protegidas ────────────────────────────────────── */}
-          <Route element={<ProtectedRoute />}>
 
-            {/* ── Store front — StoreLayout (accesible a todos los autenticados) ── */}
-            <Route element={<StoreLayout />}>
-              <Route path="/store" element={<StorePage />} />
+          {/* Raíz: anónimo → tienda; logueado → destino por rol */}
+          <Route path="/" element={<RootRedirect />} />
 
-              {/* Rutas exclusivas CLIENT */}
-              <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
-                <Route path="/carrito"        element={<CarritoPage />} />
-                <Route path="/checkout"       element={<CheckoutPage />} />
-                <Route path="/mis-pedidos"    element={<MisPedidosPage />} />
-                <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
-                <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
-                <Route path="/pedido-exitoso" element={<PedidoExitosoPage />} />
-              </Route>
+          {/* ── Store front PÚBLICO — catálogo navegable sin login (doc §5.2) ── */}
+          <Route element={<StoreLayout />}>
+            <Route path="/store" element={<StorePage />} />
+
+            {/* Rutas exclusivas CLIENT (requieren login) */}
+            <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
+              <Route path="/carrito"        element={<CarritoPage />} />
+              <Route path="/checkout"       element={<CheckoutPage />} />
+              <Route path="/mis-pedidos"    element={<MisPedidosPage />} />
+              <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
+              <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
+              <Route path="/pedido-exitoso" element={<PedidoExitosoPage />} />
             </Route>
+          </Route>
 
-            {/* ── Panel admin — Layout con sidebar ──────────────────────────── */}
+          {/* ── Panel admin PROTEGIDO — Layout con sidebar ──────────────────── */}
+          <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route index element={<SmartRedirect />} />
 
               {/* Admin Pedidos — ADMIN / PEDIDOS */}
               <Route element={<ProtectedRoute allowedRoles={["ADMIN", "PEDIDOS"]} />}>
@@ -89,7 +93,7 @@ export default function App() {
                 <Route path="/categorias"     element={<CategoriasPage />} />
               </Route>
 
-              {/* Catálogo — ADMIN / STOCK */}
+              {/* Catálogo admin — ADMIN / STOCK */}
               <Route element={<ProtectedRoute allowedRoles={["ADMIN", "STOCK"]} />}>
                 <Route path="/ingredientes"  element={<IngredientesPage />} />
                 <Route path="/productos"     element={<ProductosPage />} />

@@ -197,6 +197,16 @@ export default function StoreLayout() {
               )}
             </div>
           )}
+
+          {/* Anónimo: botón para iniciar sesión */}
+          {!user && (
+            <Link
+              to="/login"
+              className="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors"
+            >
+              Iniciar sesión
+            </Link>
+          )}
         </div>
       </header>
 
