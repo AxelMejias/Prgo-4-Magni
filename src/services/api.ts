@@ -220,13 +220,6 @@ export const productosApi = {
       credentials: "include",
       body: JSON.stringify({ destacado }),
     }).then((r) => handleResponse<ProductoDetalle>(r)),
-  setStock: (id: number, stock_cantidad: number) =>
-    fetch(`${BASE}/api/v1/productos/${id}/stock`, {
-      method: "PATCH",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ stock_cantidad }),
-    }).then((r) => handleResponse<ProductoDetalle>(r)),
   delete: (id: number) => del(`/api/v1/productos/${id}`),
 
   getInactivos: (page = 1, size = 20) =>

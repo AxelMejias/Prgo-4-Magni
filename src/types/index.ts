@@ -86,6 +86,8 @@ export interface ProductoListItem {
   margen_ganancia: number;
   costo_total_insumos: number;
   stock_cantidad: number;
+  /** Stock REAL derivado de los insumos (min producible). null si no tiene receta. */
+  stock_disponible: number | null;
   disponible: boolean;
   destacado: boolean;
   categorias: Categoria[];
