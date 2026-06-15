@@ -28,14 +28,14 @@ axiosClient.interceptors.response.use(
       original._retry = true;
 
       const refreshToken = useAuthStore.getState().refreshToken;
+      // Anónimo (sin sesión): NO forzar /login — el catálogo es público y el
+      // routing (ProtectedRoute) ya protege lo que requiere login. Solo se
+      // rechaza el error para que lo maneje quien hizo la llamada.
       if (!refreshToken) {
-        if (window.location.pathname !== "/login") {
-          useAuthStore.getState().logout();
-          window.location.href = "/login";
-        }
         return Promise.reject(error);
       }
 
+      // Sesión activa: intentar refrescar el access token de forma transparente.
       try {
         const { data } = await axios.post(
           `${BASE_URL}/api/v1/auth/refresh`,
@@ -46,8 +46,11 @@ axiosClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return axiosClient(original);
       } catch {
+        // El refresh falló → la sesión expiró de verdad: cerrar sesión y al login.
         useAuthStore.getState().logout();
-        window.location.href = "/login";
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
         return Promise.reject(error);
       }
     }
