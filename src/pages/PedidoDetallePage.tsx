@@ -226,8 +226,10 @@ export default function PedidoDetallePage() {
         </div>
       </section>
 
-      {/* Completar pago — pedido MERCADOPAGO aún PENDIENTE con init_point disponible */}
-      {pedido.estado_codigo === "PENDIENTE" &&
+      {/* Completar pago — SOLO el cliente dueño (no el staff): pedido MERCADOPAGO
+          aún PENDIENTE con init_point disponible. El admin/cajero no paga pedidos. */}
+      {!esStaff &&
+        pedido.estado_codigo === "PENDIENTE" &&
         pedido.forma_pago_codigo === "MERCADOPAGO" &&
         pedido.init_point && (
         <section className="bg-warning-50 rounded-2xl border border-warning-200 p-6 space-y-3">
