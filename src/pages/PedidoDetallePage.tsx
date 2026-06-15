@@ -272,26 +272,31 @@ export default function PedidoDetallePage() {
                 />
               </div>
 
-              <div className={`rounded-xl border p-3 ${restaurarStock ? "bg-success-50 border-success-200" : "bg-warning-50 border-warning-200"}`}>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={restaurarStock}
-                    onChange={(e) => setRestaurarStock(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded accent-brand-600 shrink-0"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-surface-800">
-                      Restaurar stock de insumos
-                    </p>
-                    <p className="text-xs text-surface-500 mt-0.5">
-                      {restaurarStock
-                        ? "Se devolverá el stock de los ingredientes usados en este pedido."
-                        : "El stock NO se devolverá (usalo cuando los ingredientes ya fueron consumidos en elaboración)."}
-                    </p>
-                  </div>
-                </label>
-              </div>
+              {/* La opción de NO restaurar stock solo aplica al cancelar un pedido
+                  EN_PREP (insumos ya consumidos en cocina) y es decisión del staff.
+                  En PENDIENTE no hay stock descontado; en CONFIRMADO se restaura siempre. */}
+              {esStaff && pedido.estado_codigo === "EN_PREP" && (
+                <div className={`rounded-xl border p-3 ${restaurarStock ? "bg-success-50 border-success-200" : "bg-warning-50 border-warning-200"}`}>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={restaurarStock}
+                      onChange={(e) => setRestaurarStock(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded accent-brand-600 shrink-0"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-surface-800">
+                        Restaurar stock de insumos
+                      </p>
+                      <p className="text-xs text-surface-500 mt-0.5">
+                        {restaurarStock
+                          ? "Se devolverá el stock de los ingredientes usados en este pedido."
+                          : "El stock NO se devolverá (usalo cuando los ingredientes ya fueron consumidos en elaboración)."}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
             </div>
           )}
 
