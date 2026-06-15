@@ -14,6 +14,8 @@ env/
 # Variables de entorno
 .env
 .env.*
+# ...pero la plantilla SÍ se versiona
+!.env.example
 
 # Build
 dist/
