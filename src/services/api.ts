@@ -124,6 +124,11 @@ export const categoriasApi = {
   update: (id: number, data: CategoriaInput) =>
     put<Categoria>(`/api/v1/categorias/${id}`, data),
   delete: (id: number) => del(`/api/v1/categorias/${id}`),
+  getInactivas: () =>
+    get<{ items: Categoria[]; total: number }>("/api/v1/categorias/inactivos?page=1&size=100").then(
+      (r) => r.items
+    ),
+  reactivar: (id: number) => patchJson<Categoria>(`/api/v1/categorias/${id}/reactivar`),
 };
 
 // ─── Admin: Usuarios ──────────────────────────────────────────────────────────

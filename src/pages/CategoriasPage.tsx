@@ -136,10 +136,12 @@ export default function CategoriasPage() {
   const [error, setError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  const [verInactivas, setVerInactivas] = useState(false);
 
   const { data: tree, isLoading, isError } = useQuery({
     queryKey: ["categorias-tree"],
     queryFn: categoriasApi.getTree,
+    enabled: !verInactivas,
   });
 
   const { data: listaPlana } = useQuery({
@@ -147,10 +149,23 @@ export default function CategoriasPage() {
     queryFn: categoriasApi.getAll,
   });
 
+  const { data: inactivas } = useQuery({
+    queryKey: ["categorias-inactivas"],
+    queryFn: categoriasApi.getInactivas,
+    enabled: verInactivas,
+  });
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["categorias-tree"] });
     queryClient.invalidateQueries({ queryKey: ["categorias"] });
+    queryClient.invalidateQueries({ queryKey: ["categorias-inactivas"] });
   };
+
+  const reactivarMutation = useMutation({
+    mutationFn: (id: number) => categoriasApi.reactivar(id),
+    onSuccess: () => { setDeleteError(""); invalidate(); },
+    onError: (err: Error) => setDeleteError(err.message),
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: CategoriaInput) => categoriasApi.create(payload),
@@ -242,7 +257,33 @@ export default function CategoriasPage() {
         )}
       </header>
 
-      {/* Buscador */}
+      {/* Estado: activas / inactivas (baja lógica) */}
+      <div className="flex gap-1 bg-surface-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setVerInactivas(false)}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+            !verInactivas ? "bg-white text-brand-700 shadow-sm" : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          ✓ Activas
+        </button>
+        <button
+          onClick={() => setVerInactivas(true)}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+            verInactivas ? "bg-white text-danger-600 shadow-sm" : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          🗑 Dadas de baja
+          {inactivas && inactivas.length > 0 && (
+            <span className="ml-1.5 bg-danger-100 text-danger-600 text-xs px-1.5 py-0.5 rounded-full font-bold">
+              {inactivas.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Buscador (solo en activas) */}
+      {!verInactivas && (
       <div className="relative w-full max-w-sm">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm">🔍</span>
         <input
@@ -261,9 +302,10 @@ export default function CategoriasPage() {
           </button>
         )}
       </div>
+      )}
 
-      {isLoading && <p className="text-surface-500">Cargando…</p>}
-      {isError && <p className="text-danger-600">Error al cargar categorías.</p>}
+      {!verInactivas && isLoading && <p className="text-surface-500">Cargando…</p>}
+      {!verInactivas && isError && <p className="text-danger-600">Error al cargar categorías.</p>}
 
       {deleteError && (
         <div className="flex items-start gap-3 bg-danger-50 border border-danger-200 rounded-xl px-4 py-3 text-sm text-danger-700">
@@ -273,7 +315,7 @@ export default function CategoriasPage() {
         </div>
       )}
 
-      {tree && (
+      {!verInactivas && tree && (
         <ul className="space-y-3">
           {arbolFiltrado.length === 0 && (
             <li className="text-center py-12 bg-white rounded-2xl border border-surface-200 text-surface-500">
@@ -290,6 +332,44 @@ export default function CategoriasPage() {
               onDelete={handleDelete}
               onAddChild={(parentId) => openCreate(parentId)}
             />
+          ))}
+        </ul>
+      )}
+
+      {/* Lista de categorías dadas de baja (plana, con reactivar) */}
+      {verInactivas && (
+        <ul className="space-y-2">
+          {(!inactivas || inactivas.length === 0) && (
+            <li className="text-center py-12 bg-white rounded-2xl border border-surface-200 text-surface-500">
+              No hay categorías dadas de baja.
+            </li>
+          )}
+          {inactivas?.map((cat) => (
+            <li
+              key={cat.id}
+              className="flex items-center justify-between rounded-xl px-4 py-3 bg-white border border-surface-200 opacity-90"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-surface-700 text-sm line-through">{cat.nombre}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-danger-100 text-danger-700 px-1.5 py-0.5 rounded">
+                    Dada de baja
+                  </span>
+                </div>
+                {cat.descripcion && (
+                  <p className="text-xs text-surface-500 mt-0.5 truncate">{cat.descripcion}</p>
+                )}
+              </div>
+              {canManage && (
+                <button
+                  onClick={() => reactivarMutation.mutate(cat.id)}
+                  disabled={reactivarMutation.isPending}
+                  className="shrink-0 ml-3 px-3 py-1.5 rounded-lg bg-success-50 text-success-700 text-xs font-semibold hover:bg-success-100 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  ♻️ Reactivar
+                </button>
+              )}
+            </li>
           ))}
         </ul>
       )}
