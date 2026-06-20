@@ -11,6 +11,7 @@ interface AuthState {
   login: (accessToken: string, refreshToken: string, user: User) => void;
   logout: () => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
+  setUser: (user: User) => void;
   hasRole: (roles: string[]) => boolean;
 }
 
@@ -30,6 +31,8 @@ export const useAuthStore = create<AuthState>()(
 
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken }),
+
+      setUser: (user) => set({ user }),
 
       hasRole: (roles: string[]) => {
         const user = get().user;

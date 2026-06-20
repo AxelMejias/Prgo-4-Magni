@@ -22,7 +22,30 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const original = error.config as typeof error.config & { _retry?: boolean };
+    const original = error.config as typeof error.config & {
+      _retry?: boolean;
+      _roleSynced?: boolean;
+    };
+
+    // 403 → puede ser que al usuario le hayan cambiado los roles. Resincronizamos
+    // los roles reales desde /auth/me: si perdió permisos, ProtectedRoute lo saca
+    // de la sección al re-renderizar. (El backend ya rechaza la acción de por sí.)
+    if (error.response?.status === 403 && !original._roleSynced) {
+      original._roleSynced = true;
+      const token = useAuthStore.getState().accessToken;
+      if (token) {
+        try {
+          const { data: user } = await axios.get(`${BASE_URL}/api/v1/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          });
+          useAuthStore.getState().setUser(user);
+        } catch {
+          // si /me falla (p. ej. 401), lo maneja el flujo de 401 en el próximo request
+        }
+      }
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;

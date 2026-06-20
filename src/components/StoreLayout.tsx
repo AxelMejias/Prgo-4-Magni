@@ -16,6 +16,10 @@ export default function StoreLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isClient = hasRole(["CLIENT"]);
+  // Staff (ADMIN/PEDIDOS/STOCK) puede saltar al panel desde la tienda. El destino
+  // depende del rol, igual que el redirect de la raíz.
+  const isStaff = hasRole(["ADMIN", "PEDIDOS", "STOCK"]);
+  const dashboardPath = hasRole(["ADMIN", "STOCK"]) ? "/productos" : "/admin/pedidos";
 
   // ── Overlay "Pago aprobado" ──────────────────────────────────────────────
   // Vive en StoreLayout (siempre montado) para que esté visible ANTES de que
@@ -137,6 +141,17 @@ export default function StoreLayout() {
                   {totalItems}
                 </span>
               )}
+            </Link>
+          )}
+
+          {/* Staff: acceso al panel de administración */}
+          {isStaff && (
+            <Link
+              to={dashboardPath}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-sidebar-900 text-white hover:bg-sidebar-800 transition-colors"
+            >
+              <span className="text-base leading-none">📊</span>
+              <span className="hidden sm:block">Panel</span>
             </Link>
           )}
 

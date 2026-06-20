@@ -30,15 +30,28 @@ export default function AdminUsuariosPage() {
   const qc = useQueryClient();
   const [rolFilter, setRolFilter] = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<UsuarioAdmin | null>(null);
   const [rolToAdd, setRolToAdd] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [rolARemover, setRolARemover] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
+  // Debounce de la búsqueda: evita pegarle al backend en cada tecla.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-usuarios", page, rolFilter, verInactivos],
-    queryFn: () => adminApi.getUsuarios(page, PAGE_SIZE, rolFilter || undefined, verInactivos),
+    queryKey: ["admin-usuarios", page, rolFilter, verInactivos, search],
+    queryFn: () =>
+      adminApi.getUsuarios(page, PAGE_SIZE, rolFilter || undefined, verInactivos, search || undefined),
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-usuarios"] });
@@ -61,9 +74,13 @@ export default function AdminUsuariosPage() {
     onSuccess: (updated) => {
       setSelected(updated);
       setActionError("");
+      setRolARemover(null);
       invalidate();
     },
-    onError: (err: Error) => setActionError(err.message),
+    onError: (err: Error) => {
+      setActionError(err.message);
+      setRolARemover(null);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -103,6 +120,7 @@ export default function AdminUsuariosPage() {
     setSelected(u);
     setConfirmDelete(false);
     setRolToAdd("");
+    setRolARemover(null);
     setActionError("");
   }
 
@@ -143,6 +161,26 @@ export default function AdminUsuariosPage() {
         >
           🗑 Dados de baja
         </button>
+      </div>
+
+      {/* Búsqueda por nombre o email */}
+      <div className="relative w-full max-w-sm">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm">🔍</span>
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Buscar por nombre o email…"
+          className="w-full pl-9 pr-9 py-2 border border-surface-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition bg-white"
+        />
+        {searchInput && (
+          <button
+            onClick={() => setSearchInput("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 text-sm"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Filtros por rol */}
@@ -377,12 +415,7 @@ export default function AdminUsuariosPage() {
                             {r.nombre}
                           </span>
                           <button
-                            onClick={() =>
-                              removerMutation.mutate({
-                                id: selected.id,
-                                rol: r.codigo,
-                              })
-                            }
+                            onClick={() => setRolARemover(r.codigo)}
                             disabled={removerMutation.isPending}
                             title="Quitar rol"
                             className="w-5 h-5 rounded-full bg-surface-200 hover:bg-danger-100 hover:text-danger-700 flex items-center justify-center text-surface-500 text-xs transition-colors cursor-pointer"
@@ -392,6 +425,33 @@ export default function AdminUsuariosPage() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Confirmación de quitar rol (acción sensible) */}
+                {rolARemover && (
+                  <div className="mt-3 bg-warning-50 border border-warning-200 rounded-xl p-3 space-y-2">
+                    <p className="text-sm text-surface-700">
+                      ¿Quitar el rol{" "}
+                      <strong>{ROLE_META[rolARemover]?.label ?? rolARemover}</strong> a{" "}
+                      <strong>{selected.nombre} {selected.apellido}</strong>? Perderá ese acceso
+                      de inmediato.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => removerMutation.mutate({ id: selected.id, rol: rolARemover })}
+                        disabled={removerMutation.isPending}
+                        className="flex-1 py-2 rounded-xl bg-danger-600 text-white text-sm font-semibold hover:bg-danger-700 disabled:opacity-50 transition-colors cursor-pointer"
+                      >
+                        {removerMutation.isPending ? "Quitando…" : "Sí, quitar rol"}
+                      </button>
+                      <button
+                        onClick={() => setRolARemover(null)}
+                        className="flex-1 py-2 rounded-xl border border-surface-300 text-surface-600 text-sm font-semibold hover:bg-surface-50 transition-colors cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

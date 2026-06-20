@@ -168,10 +168,11 @@ function patchJson<T>(url: string): Promise<T> {
 }
 
 export const adminApi = {
-  getUsuarios: (page = 1, size = 20, rol_codigo?: string, solo_inactivos = false) => {
+  getUsuarios: (page = 1, size = 20, rol_codigo?: string, solo_inactivos = false, search?: string) => {
     const qs = new URLSearchParams({ page: String(page), size: String(size) });
     if (rol_codigo) qs.set("rol_codigo", rol_codigo);
     if (solo_inactivos) qs.set("solo_inactivos", "true");
+    if (search && search.trim()) qs.set("q", search.trim());
     return get<PaginatedUsuariosAdmin>(`/api/v1/admin/usuarios?${qs}`);
   },
   asignarRol: (usuarioId: number, rolCodigo: string) =>
