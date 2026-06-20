@@ -35,9 +35,9 @@ export default function ProductosPage() {
   const nombreParam = searchParams.get("nombre") ?? "";
   const categoriaParam = searchParams.get("categoria_id");
   const categoriaId = categoriaParam ? Number(categoriaParam) : undefined;
-  const soloDispRaw = searchParams.get("solo_disponibles");
-  const soloDisponibles: boolean | undefined =
-    soloDispRaw === "true" ? true : soloDispRaw === "false" ? false : undefined;
+  const conStockRaw = searchParams.get("con_stock");
+  const conStock: boolean | undefined =
+    conStockRaw === "true" ? true : conStockRaw === "false" ? false : undefined;
 
   const [nombreInput, setNombreInput] = useState(nombreParam);
 
@@ -63,11 +63,14 @@ export default function ProductosPage() {
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: productosData, isLoading, isError } = useQuery({
-    queryKey: ["productos", "activos", currentPage, nombreParam, soloDisponibles, categoriaId],
+    queryKey: ["productos", "activos", currentPage, nombreParam, conStock, categoriaId],
     queryFn: () =>
       productosApi.getAll(currentPage, PAGE_SIZE, {
         nombre: nombreParam || undefined,
-        solo_disponibles: soloDisponibles,
+        // El admin gestiona TODO el catálogo (visibles y ocultos); el filtro de
+        // disponibilidad ahora es por STOCK real, no por el flag visible/oculto.
+        solo_disponibles: false,
+        con_stock: conStock,
         categoria_id: categoriaId,
       }),
     enabled: tab === "activos",
@@ -183,12 +186,12 @@ export default function ProductosPage() {
     });
   }
 
-  function handleSoloDisponiblesChange(v: boolean | undefined) {
+  function handleConStockChange(v: boolean | undefined) {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
       params.set("page", "1");
-      if (v === undefined) params.delete("solo_disponibles");
-      else params.set("solo_disponibles", String(v));
+      if (v === undefined) params.delete("con_stock");
+      else params.set("con_stock", String(v));
       return params;
     });
   }
@@ -433,11 +436,11 @@ export default function ProductosPage() {
         <>
           <FilterBarProductos
             nombre={nombreInput}
-            soloDisponibles={soloDisponibles}
+            conStock={conStock}
             categoriaId={categoriaId}
             categorias={categorias ?? []}
             onNombreChange={handleNombreChange}
-            onSoloDisponiblesChange={handleSoloDisponiblesChange}
+            onConStockChange={handleConStockChange}
             onCategoriaChange={handleCategoriaChange}
             onReset={handleResetFilters}
             onExport={handleExport}
@@ -495,12 +498,22 @@ export default function ProductosPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => navigate(`/productos/${prod.id}`)}
-                          className="font-semibold text-sm text-brand-600 hover:text-brand-800 transition-colors cursor-pointer hover:underline underline-offset-2"
-                        >
-                          {prod.nombre}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => navigate(`/productos/${prod.id}`)}
+                            className="font-semibold text-sm text-brand-600 hover:text-brand-800 transition-colors cursor-pointer hover:underline underline-offset-2"
+                          >
+                            {prod.nombre}
+                          </button>
+                          {!prod.disponible && (
+                            <span
+                              className="text-[10px] font-bold uppercase tracking-wide bg-surface-200 text-surface-500 px-1.5 py-0.5 rounded"
+                              title="No visible en la tienda"
+                            >
+                              Oculto
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-surface-500 max-w-[200px]">
                         <span className="truncate block">

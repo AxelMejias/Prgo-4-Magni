@@ -3,11 +3,11 @@ import type { Categoria } from "../../../types";
 
 interface FilterBarProductosProps {
   nombre: string;
-  soloDisponibles: boolean | undefined;
+  conStock: boolean | undefined;
   categoriaId: number | undefined;
   categorias: Categoria[];
   onNombreChange: (v: string) => void;
-  onSoloDisponiblesChange: (v: boolean | undefined) => void;
+  onConStockChange: (v: boolean | undefined) => void;
   onCategoriaChange: (v: number | undefined) => void;
   onReset: () => void;
   onExport: () => void;
@@ -20,11 +20,11 @@ interface FilterBarProductosProps {
 
 export default function FilterBarProductos({
   nombre,
-  soloDisponibles,
+  conStock,
   categoriaId,
   categorias,
   onNombreChange,
-  onSoloDisponiblesChange,
+  onConStockChange,
   onCategoriaChange,
   onReset,
   onExport,
@@ -35,7 +35,7 @@ export default function FilterBarProductos({
   onDescargarPlantilla,
 }: FilterBarProductosProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasActiveFilters = nombre !== "" || soloDisponibles !== undefined || categoriaId !== undefined;
+  const hasActiveFilters = nombre !== "" || conStock !== undefined || categoriaId !== undefined;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -56,18 +56,18 @@ export default function FilterBarProductos({
         className="border border-surface-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white w-56"
       />
 
-      {/* Filtro disponibilidad */}
+      {/* Filtro por stock real (derivado de los insumos) */}
       <select
-        value={soloDisponibles === undefined ? "" : soloDisponibles ? "true" : "false"}
+        value={conStock === undefined ? "" : conStock ? "true" : "false"}
         onChange={(e) => {
-          if (e.target.value === "") onSoloDisponiblesChange(undefined);
-          else onSoloDisponiblesChange(e.target.value === "true");
+          if (e.target.value === "") onConStockChange(undefined);
+          else onConStockChange(e.target.value === "true");
         }}
         className="border border-surface-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
       >
         <option value="">Todos</option>
-        <option value="true">✅ Solo disponibles</option>
-        <option value="false">🚫 Solo no disponibles</option>
+        <option value="true">✅ Con stock</option>
+        <option value="false">🚫 Sin stock</option>
       </select>
 
       {/* Filtro categoría */}

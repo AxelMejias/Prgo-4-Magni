@@ -202,12 +202,14 @@ export const productosApi = {
   getAll: (
     page = 1,
     size = 20,
-    params?: { nombre?: string; solo_disponibles?: boolean; categoria_id?: number; solo_destacados?: boolean }
+    params?: { nombre?: string; solo_disponibles?: boolean; con_stock?: boolean; categoria_id?: number; solo_destacados?: boolean }
   ) => {
     const qs = new URLSearchParams({ page: String(page), size: String(size) });
     if (params?.nombre) qs.set("nombre", params.nombre);
     if (params?.solo_disponibles !== undefined)
       qs.set("solo_disponibles", String(params.solo_disponibles));
+    if (params?.con_stock !== undefined)
+      qs.set("con_stock", String(params.con_stock));
     if (params?.categoria_id !== undefined)
       qs.set("categoria_id", String(params.categoria_id));
     if (params?.solo_destacados)
