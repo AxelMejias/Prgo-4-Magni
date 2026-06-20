@@ -16,6 +16,7 @@ import Modal from "../components/Modal";
 import { useAuthStore } from "../shared/store/authStore";
 import InsumoSelector from "../features/productos-crud/ui/InsumoSelector";
 import FilterBarProductos from "../features/productos-filter/ui/FilterBar";
+import { useCatalogoRealtime } from "../shared/hooks/useCatalogoRealtime";
 
 type Tab = "activos" | "inactivos";
 
@@ -24,6 +25,8 @@ const PAGE_SIZE = 5;
 export default function ProductosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  // Refresca la grilla automáticamente cuando otro usuario/pestaña cambia el catálogo.
+  useCatalogoRealtime();
   const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1009,6 +1012,44 @@ export default function ProductosPage() {
               {selectedInsumos.map((item, index) => {
                 const ing = ingredientes?.find((i) => i.id === item.ingrediente_id);
                 const esTerminado = ing?.es_producto_terminado ?? false;
+
+                // Insumo dado de baja: sigue en la receta pero ya no es un ingrediente
+                // activo seleccionable. Lo mostramos como fila de solo lectura (sin el
+                // desplegable que listaría todos los ingredientes), con opción de quitarlo.
+                // Para reemplazarlo, el admin usa "+ Agregar".
+                const esInactivo = !!ingredientes && !ing && item.ingrediente_id > 0;
+                if (esInactivo) {
+                  const detalle = editingDetail?.insumos.find(
+                    (d) => d.ingrediente_id === item.ingrediente_id
+                  );
+                  return (
+                    <div
+                      key={index}
+                      className="flex gap-2 items-center bg-danger-50 rounded-xl p-2 border border-danger-200"
+                    >
+                      <div className="flex-1 px-3 py-2 text-sm flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-surface-700">
+                          {detalle?.nombre ?? `Ingrediente #${item.ingrediente_id}`}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-danger-100 text-danger-700 px-1.5 py-0.5 rounded">
+                          Dado de baja
+                        </span>
+                      </div>
+                      <span className="w-24 text-center text-sm text-surface-400" title="Cantidad en la receta">
+                        {item.cantidad}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeInsumo(index)}
+                        title="Quitar insumo dado de baja"
+                        className="w-8 h-8 rounded-lg bg-danger-100 text-danger-600 hover:bg-danger-200 flex items-center justify-center transition cursor-pointer text-sm"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={index}
@@ -1073,7 +1114,15 @@ export default function ProductosPage() {
                 {(() => {
                   const costo = selectedInsumos.reduce((acc, s) => {
                     const ing = ingredientes.find((i) => i.id === s.ingrediente_id);
-                    return acc + (ing ? Number(ing.costo_unitario) * Number(s.cantidad) : 0);
+                    // Para insumos dados de baja (no están en la lista activa) usamos el
+                    // costo del detalle cargado, para no subestimar el costo total.
+                    const costoUnit = ing
+                      ? Number(ing.costo_unitario)
+                      : Number(
+                          editingDetail?.insumos.find((d) => d.ingrediente_id === s.ingrediente_id)
+                            ?.costo_unitario ?? 0
+                        );
+                    return acc + costoUnit * Number(s.cantidad);
                   }, 0);
                   const precio = costo * (1 + Number(margenGanancia) / 100);
                   return (

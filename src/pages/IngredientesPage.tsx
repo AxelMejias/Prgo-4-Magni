@@ -8,6 +8,7 @@ import IngredienteModal from "../features/ingredientes-crud/ui/IngredienteModal"
 import IngredientesTable from "../widgets/ingredientes-table/ui/IngredientesTable";
 import Modal from "../components/Modal";
 import { useAuthStore } from "../shared/store/authStore";
+import { useCatalogoRealtime } from "../shared/hooks/useCatalogoRealtime";
 
 type Tab = "activos" | "inactivos";
 
@@ -15,6 +16,8 @@ const PAGE_SIZE = 5;
 
 export default function IngredientesPage() {
   const queryClient = useQueryClient();
+  // Refresca la grilla automáticamente cuando otro usuario/pestaña cambia el catálogo.
+  useCatalogoRealtime();
   const canManage = useAuthStore((s) => s.hasRole(["ADMIN"]));
   const canEdit   = useAuthStore((s) => s.hasRole(["ADMIN", "STOCK"]));
 

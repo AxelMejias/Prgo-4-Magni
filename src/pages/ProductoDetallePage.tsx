@@ -190,12 +190,13 @@ export default function ProductoDetallePage() {
             ) : (
               <>
                 {producto.insumos.map((ins, i) => {
+                  const dadoDeBaja = ins.activo === false;
                   const stockBajo = Number(ins.stock_actual) <= 0;
                   return (
                     <div
                       key={ins.ingrediente_id}
                       className={`flex items-center justify-between px-6 py-3.5 border-b border-surface-100 last:border-0 ${
-                        i % 2 === 0 ? "bg-white" : "bg-surface-50/50"
+                        dadoDeBaja ? "bg-danger-50/60" : i % 2 === 0 ? "bg-white" : "bg-surface-50/50"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -203,9 +204,18 @@ export default function ProductoDetallePage() {
                           {i + 1}
                         </span>
                         <div>
-                          <p className="text-sm font-medium text-surface-700">{ins.nombre}</p>
+                          <p className="text-sm font-medium text-surface-700 flex items-center gap-2">
+                            {ins.nombre}
+                            {dadoDeBaja && (
+                              <span className="text-[10px] font-bold uppercase tracking-wide bg-danger-100 text-danger-700 px-1.5 py-0.5 rounded">
+                                Dado de baja
+                              </span>
+                            )}
+                          </p>
                           <p className={`text-xs ${stockBajo ? "text-danger-500 font-semibold" : "text-surface-400"}`}>
-                            Stock: {Number(ins.stock_actual).toLocaleString("es-AR")} {ins.unidad_medida}
+                            {dadoDeBaja
+                              ? "Insumo no disponible — el producto queda sin stock"
+                              : `Stock: ${Number(ins.stock_actual).toLocaleString("es-AR")} ${ins.unidad_medida}`}
                             {stockBajo && " ⚠️"}
                           </p>
                         </div>

@@ -29,6 +29,7 @@ const FILTER_TABS = [
 export default function AdminUsuariosPage() {
   const qc = useQueryClient();
   const [rolFilter, setRolFilter] = useState("");
+  const [verInactivos, setVerInactivos] = useState(false);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<UsuarioAdmin | null>(null);
   const [rolToAdd, setRolToAdd] = useState("");
@@ -36,8 +37,8 @@ export default function AdminUsuariosPage() {
   const [actionError, setActionError] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-usuarios", page, rolFilter],
-    queryFn: () => adminApi.getUsuarios(page, PAGE_SIZE, rolFilter || undefined),
+    queryKey: ["admin-usuarios", page, rolFilter, verInactivos],
+    queryFn: () => adminApi.getUsuarios(page, PAGE_SIZE, rolFilter || undefined, verInactivos),
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-usuarios"] });
@@ -75,6 +76,16 @@ export default function AdminUsuariosPage() {
     onError: (err: Error) => setActionError(err.message),
   });
 
+  const reactivarMutation = useMutation({
+    mutationFn: (id: number) => adminApi.reactivarUsuario(id),
+    onSuccess: () => {
+      setSelected(null);
+      setActionError("");
+      invalidate();
+    },
+    onError: (err: Error) => setActionError(err.message),
+  });
+
   useEffect(() => {
     if (!selected) return;
     const handler = (e: KeyboardEvent) => {
@@ -107,6 +118,32 @@ export default function AdminUsuariosPage() {
           Gestioná los usuarios registrados y sus roles.
         </p>
       </header>
+
+      {/* Estado: activos / inactivos (baja lógica) */}
+      <div className="flex gap-1 bg-surface-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => {
+            setVerInactivos(false);
+            setPage(1);
+          }}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+            !verInactivos ? "bg-white text-brand-700 shadow-sm" : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          ✓ Activos
+        </button>
+        <button
+          onClick={() => {
+            setVerInactivos(true);
+            setPage(1);
+          }}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+            verInactivos ? "bg-white text-danger-600 shadow-sm" : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          🗑 Dados de baja
+        </button>
+      </div>
 
       {/* Filtros por rol */}
       <div className="flex gap-2 flex-wrap">
@@ -441,6 +478,25 @@ export default function AdminUsuariosPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Reactivación de un usuario dado de baja */}
+              {selected.deleted_at && (
+                <div className="border border-success-200 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-success-700 uppercase tracking-wider">
+                    Reactivar cuenta
+                  </p>
+                  <p className="text-sm text-surface-600">
+                    Volvé a habilitar a este usuario para que pueda iniciar sesión y operar.
+                  </p>
+                  <button
+                    onClick={() => reactivarMutation.mutate(selected.id)}
+                    disabled={reactivarMutation.isPending}
+                    className="w-full py-2 rounded-xl bg-success-600 text-white text-sm font-semibold hover:bg-success-700 disabled:opacity-50 transition-colors cursor-pointer"
+                  >
+                    {reactivarMutation.isPending ? "Reactivando…" : "♻️ Reactivar usuario"}
+                  </button>
                 </div>
               )}
             </div>

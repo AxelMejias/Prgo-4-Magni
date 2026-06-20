@@ -154,10 +154,19 @@ function delJson<T>(url: string): Promise<T> {
   }).then((r) => handleResponse<T>(r));
 }
 
+function patchJson<T>(url: string): Promise<T> {
+  return fetch(`${BASE}${url}`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    credentials: "include",
+  }).then((r) => handleResponse<T>(r));
+}
+
 export const adminApi = {
-  getUsuarios: (page = 1, size = 20, rol_codigo?: string) => {
+  getUsuarios: (page = 1, size = 20, rol_codigo?: string, solo_inactivos = false) => {
     const qs = new URLSearchParams({ page: String(page), size: String(size) });
     if (rol_codigo) qs.set("rol_codigo", rol_codigo);
+    if (solo_inactivos) qs.set("solo_inactivos", "true");
     return get<PaginatedUsuariosAdmin>(`/api/v1/admin/usuarios?${qs}`);
   },
   asignarRol: (usuarioId: number, rolCodigo: string) =>
@@ -166,6 +175,8 @@ export const adminApi = {
     delJson<UsuarioAdmin>(`/api/v1/admin/usuarios/${usuarioId}/roles/${rolCodigo}`),
   deleteUsuario: (usuarioId: number) =>
     del(`/api/v1/admin/usuarios/${usuarioId}`),
+  reactivarUsuario: (usuarioId: number) =>
+    patchJson<UsuarioAdmin>(`/api/v1/admin/usuarios/${usuarioId}/reactivar`),
 };
 
 // ─── Ingredientes ─────────────────────────────────────────────────────────────

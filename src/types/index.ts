@@ -69,6 +69,8 @@ export interface InsumoEnProducto {
   subtotal: number;
   stock_actual: number;
   es_producto_terminado: boolean;
+  /** false si el ingrediente fue dado de baja: el producto queda sin stock. */
+  activo?: boolean;
 }
 
 export interface InsumoEnProductoInput {
