@@ -5,6 +5,7 @@ import { productosApi, categoriasApi } from "../services/api";
 import type { ProductoListItem } from "../types";
 import { useCartStore } from "../features/cart/model/cartStore";
 import { useAuthStore } from "../shared/store/authStore";
+import { useStoreCatalogoRealtime } from "../shared/hooks/useStoreCatalogoRealtime";
 import { formatARS, toNumber } from "../shared/lib/format";
 
 const PAGE_SIZE = 8;
@@ -60,6 +61,9 @@ export default function StorePage() {
   const catalogoRef = useRef<HTMLElement>(null);
   const addItem = useCartStore((s) => s.addItem);
   const canBuy  = useAuthStore((s) => s.hasRole(["CLIENT"]));
+
+  // Refresca la tienda en vivo cuando cambia el catálogo (canal público sin auth).
+  useStoreCatalogoRealtime();
 
   // ── Productos destacados ───────────────────────────────────────
   const { data: destacadosData } = useQuery({
