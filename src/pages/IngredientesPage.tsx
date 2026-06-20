@@ -259,21 +259,23 @@ export default function IngredientesPage() {
         >
           ✓ Activos
         </button>
-        <button
-          onClick={() => switchTab("inactivos")}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-            tab === "inactivos"
-              ? "bg-white text-danger-600 shadow-sm"
-              : "text-surface-500 hover:text-surface-700"
-          }`}
-        >
-          🗑 Inactivos
-          {inactivosData && inactivosData.total > 0 && (
-            <span className="ml-1.5 bg-danger-100 text-danger-600 text-xs px-1.5 py-0.5 rounded-full font-bold">
-              {inactivosData.total}
-            </span>
-          )}
-        </button>
+        {canManage && (
+          <button
+            onClick={() => switchTab("inactivos")}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+              tab === "inactivos"
+                ? "bg-white text-danger-600 shadow-sm"
+                : "text-surface-500 hover:text-surface-700"
+            }`}
+          >
+            🗑 Inactivos
+            {inactivosData && inactivosData.total > 0 && (
+              <span className="ml-1.5 bg-danger-100 text-danger-600 text-xs px-1.5 py-0.5 rounded-full font-bold">
+                {inactivosData.total}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* ── Tab: Activos ── */}
