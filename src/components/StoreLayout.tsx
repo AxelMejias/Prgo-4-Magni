@@ -13,7 +13,16 @@ export default function StoreLayout() {
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const hasRole     = useAuthStore((s) => s.hasRole);
   const totalItems  = useCartStore((s) => s.totalItems());
+  const bindCartToUser = useCartStore((s) => s.bindToUser);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Ata el carrito al usuario logueado: si el carrito persistido era de otra
+  // cuenta (mismo navegador / pestañas incógnito que comparten storage), se vacía
+  // para no mezclar carritos entre clientes.
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId != null) bindCartToUser(userId);
+  }, [userId, bindCartToUser]);
 
   const isClient = hasRole(["CLIENT"]);
   // Staff (ADMIN/PEDIDOS/STOCK) puede saltar al panel desde la tienda. El destino
