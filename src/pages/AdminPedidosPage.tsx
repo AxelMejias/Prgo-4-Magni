@@ -10,7 +10,7 @@ import type { WsMessage } from "../shared/hooks/useOrderStatus";
 import WsStatusBadge from "../shared/ui/WsStatusBadge";
 import { useAuthStore } from "../shared/store/authStore";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 const TABS: { value: EstadoCodigo | ""; label: string }[] = [
   { value: "",           label: "Todos" },

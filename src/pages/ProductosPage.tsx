@@ -15,12 +15,13 @@ import type {
 import Modal from "../components/Modal";
 import { useAuthStore } from "../shared/store/authStore";
 import InsumoSelector from "../features/productos-crud/ui/InsumoSelector";
+import CategoriaQuickCreate from "../features/productos-crud/ui/CategoriaQuickCreate";
 import FilterBarProductos from "../features/productos-filter/ui/FilterBar";
 import { useCatalogoRealtime } from "../shared/hooks/useCatalogoRealtime";
 
 type Tab = "activos" | "inactivos";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 export default function ProductosPage() {
   const queryClient = useQueryClient();
@@ -53,6 +54,7 @@ export default function ProductosPage() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [catCreateOpen, setCatCreateOpen] = useState(false);
 
   // ── Excel ──────────────────────────────────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
@@ -371,6 +373,11 @@ export default function ProductosPage() {
     setSelectedCategorias((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
+  }
+
+  function handleCategoriaCreada(cat: { id: number }) {
+    // Autoselecciona la categoría recién creada en el producto en edición.
+    setSelectedCategorias((prev) => (prev.includes(cat.id) ? prev : [...prev, cat.id]));
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending || (!!editingId && isLoadingDetail);
@@ -979,11 +986,20 @@ export default function ProductosPage() {
           </div>
 
           {/* Categorías */}
-          {categorias && categorias.length > 0 && (
-            <div>
-              <label className="block text-sm font-semibold text-surface-700 mb-2">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-surface-700">
                 Categorías
               </label>
+              <button
+                type="button"
+                onClick={() => setCatCreateOpen(true)}
+                className="text-brand-600 hover:text-brand-800 text-xs font-bold cursor-pointer flex items-center gap-1 bg-brand-50 px-3 py-1.5 rounded-lg hover:bg-brand-100 transition"
+              >
+                + Nueva categoría
+              </button>
+            </div>
+            {categorias && categorias.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {categorias.map((cat) => (
                   <button
@@ -1001,8 +1017,14 @@ export default function ProductosPage() {
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="bg-surface-50 rounded-xl p-4 text-center border border-dashed border-surface-300">
+                <p className="text-xs text-surface-400">
+                  Todavía no hay categorías. Creá una con "+ Nueva categoría".
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Insumos */}
           <div>
@@ -1166,6 +1188,13 @@ export default function ProductosPage() {
             onClose={() => setSelectorOpen(false)}
             selectedIds={selectedInsumos.map((s) => s.ingrediente_id)}
             onToggle={handleToggleInsumo}
+          />
+
+          <CategoriaQuickCreate
+            open={catCreateOpen}
+            onClose={() => setCatCreateOpen(false)}
+            categorias={categorias ?? []}
+            onCreated={handleCategoriaCreada}
           />
 
           <div className="flex justify-end gap-3 pt-3 border-t border-surface-100">

@@ -31,6 +31,12 @@ const PRODUCTO_EVENTS = new Set([
   "producto_eliminado",
 ]);
 
+const CATEGORIA_EVENTS = new Set([
+  "categoria_creada",
+  "categoria_actualizada",
+  "categoria_eliminada",
+]);
+
 export function useCatalogoRealtime() {
   const queryClient = useQueryClient();
   // El canal admin solo admite ADMIN / PEDIDOS; evitamos abrir un socket que el
@@ -42,9 +48,19 @@ export function useCatalogoRealtime() {
       if (INGREDIENTE_EVENTS.has(msg.event)) {
         queryClient.invalidateQueries({ queryKey: ["ingredientes"] });
         queryClient.invalidateQueries({ queryKey: ["ingredientes-select"] });
+        // Modal "+ agregar insumo" dentro del alta/edición de producto: usa su
+        // propia query, hay que invalidarla para que muestre el costo nuevo en vivo.
+        queryClient.invalidateQueries({ queryKey: ["insumos-selector"] });
         queryClient.invalidateQueries({ queryKey: ["productos"] });
       } else if (PRODUCTO_EVENTS.has(msg.event)) {
         queryClient.invalidateQueries({ queryKey: ["productos"] });
+      } else if (CATEGORIA_EVENTS.has(msg.event)) {
+        // Alta/baja/edición de categoría desde otra pestaña/usuario: refrescar
+        // el árbol, la lista plana, las inactivas y el selector de la tienda.
+        queryClient.invalidateQueries({ queryKey: ["categorias"] });
+        queryClient.invalidateQueries({ queryKey: ["categorias-tree"] });
+        queryClient.invalidateQueries({ queryKey: ["categorias-inactivas"] });
+        queryClient.invalidateQueries({ queryKey: ["categorias-store"] });
       }
     },
     [queryClient]

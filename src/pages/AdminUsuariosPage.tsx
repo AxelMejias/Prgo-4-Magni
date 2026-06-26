@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, type UsuarioAdmin } from "../services/api";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 const ALL_ROLES = [
   { codigo: "ADMIN",   nombre: "Administrador" },
