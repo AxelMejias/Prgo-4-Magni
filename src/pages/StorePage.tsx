@@ -56,9 +56,15 @@ export default function StorePage() {
   const [nombreInput, setNombreInput] = useState(nombreParam);
   const [detailId,    setDetailId]    = useState<number | null>(detalleParam);
   const [toast,       setToast]       = useState<string | null>(null);
+  const [toastSub,    setToastSub]    = useState("Agregado al carrito");
+  const [toastIcon,   setToastIcon]   = useState("🛒");
   const [toastVisible, setToastVisible] = useState(false);
 
   const catalogoRef = useRef<HTMLElement>(null);
+  // Scroll horizontal de los chips de categoría: detecta si hay más a izq/der para
+  // mostrar flechas y degradados (afordancia que antes faltaba al desbordar).
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const [chipScroll, setChipScroll] = useState({ left: false, right: false });
   const addItem = useCartStore((s) => s.addItem);
   const canBuy  = useAuthStore((s) => s.hasRole(["CLIENT"]));
 
@@ -99,6 +105,29 @@ export default function StorePage() {
     return categorias.filter((c) => !parentIds.has(c.id));
   }, [categorias]);
 
+  // Recalcula si los chips pueden scrollear a izquierda/derecha.
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el) return;
+    const update = () => {
+      setChipScroll({
+        left: el.scrollLeft > 4,
+        right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+      });
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [leafCategorias.length]);
+
+  function scrollChips(dir: -1 | 1) {
+    chipsRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
+  }
+
   // ── Catálogo ───────────────────────────────────────────────────
   const { data, isLoading, isError } = useQuery({
     queryKey: ["productos-store", currentPage, nombreParam, categoriaParam],
@@ -127,11 +156,37 @@ export default function StorePage() {
     return items;
   }, [data?.items, sortParam]);
 
-  function showToast(nombre: string) {
+  function showToast(nombre: string, sub = "Agregado al carrito", icon = "🛒") {
     setToast(nombre);
+    setToastSub(sub);
+    setToastIcon(icon);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 2200);
     setTimeout(() => setToast(null), 2600);
+  }
+
+  /** Intenta sumar 1 unidad respetando el stock disponible. Devuelve false si ya
+   *  se alcanzó el tope (y avisa al cliente). */
+  function tryAddUnit(p: ProductoListItem): boolean {
+    const max = p.stock_disponible;
+    const enCarrito =
+      useCartStore.getState().items.find((i) => i.producto_id === p.id)?.cantidad ?? 0;
+    if (max != null && enCarrito >= max) {
+      showToast(
+        `Máximo disponible: ${max}`,
+        `Es todo el stock de ${p.nombre}`,
+        "⚠️"
+      );
+      return false;
+    }
+    addItem({
+      producto_id: p.id,
+      nombre: p.nombre,
+      precio: toNumber(p.precio_base),
+      image_url: p.image_url ?? undefined,
+      stock: max,
+    });
+    return true;
   }
 
   // Sync nombre input con URL
@@ -214,15 +269,15 @@ export default function StorePage() {
 
   function handleAdd(p: ProductoListItem, e: React.MouseEvent) {
     e.stopPropagation();
-    addItem({ producto_id: p.id, nombre: p.nombre, precio: toNumber(p.precio_base), image_url: p.image_url ?? undefined });
-    showToast(p.nombre);
+    if (tryAddUnit(p)) showToast(p.nombre);
   }
 
   function handleAddFromDetail() {
     if (!detail) return;
-    addItem({ producto_id: detail.id, nombre: detail.nombre, precio: toNumber(detail.precio_base), image_url: detail.image_url ?? undefined });
-    showToast(detail.nombre);
-    closeDetail();
+    if (tryAddUnit(detail)) {
+      showToast(detail.nombre);
+      closeDetail();
+    }
   }
 
   const activeCategoryName = leafCategorias.find((c) => c.id === categoriaParam)?.nombre;
@@ -447,32 +502,68 @@ export default function StorePage() {
             </select>
           </div>
 
-          {/* Chips de categoría */}
+          {/* Chips de categoría — fila scrolleable con flechas + degradado en los bordes */}
           {leafCategorias.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-              <button
-                onClick={() => setCategoria(0)}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
-                  !categoriaParam
-                    ? "bg-brand-600 text-white shadow-sm"
-                    : "bg-white border border-surface-300 text-surface-600 hover:border-brand-400 hover:text-brand-600"
-                }`}
+            <div className="relative">
+              {/* Degradado + flecha izquierda */}
+              {chipScroll.left && (
+                <>
+                  <div className="pointer-events-none absolute left-0 top-0 bottom-1 w-12 bg-gradient-to-r from-surface-50 to-transparent z-10" />
+                  <button
+                    type="button"
+                    aria-label="Ver categorías anteriores"
+                    onClick={() => scrollChips(-1)}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white border border-surface-200 shadow-md flex items-center justify-center text-surface-600 hover:text-brand-600 hover:border-brand-300 transition cursor-pointer"
+                  >
+                    ‹
+                  </button>
+                </>
+              )}
+
+              <div
+                ref={chipsRef}
+                className="flex gap-2 overflow-x-auto pb-1 scroll-smooth"
+                style={{ scrollbarWidth: "none" }}
               >
-                Todas
-              </button>
-              {leafCategorias.map((cat) => (
                 <button
-                  key={cat.id}
-                  onClick={() => setCategoria(cat.id)}
+                  onClick={() => setCategoria(0)}
                   className={`px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
-                    categoriaParam === cat.id
+                    !categoriaParam
                       ? "bg-brand-600 text-white shadow-sm"
                       : "bg-white border border-surface-300 text-surface-600 hover:border-brand-400 hover:text-brand-600"
                   }`}
                 >
-                  {cat.nombre}
+                  Todas
                 </button>
-              ))}
+                {leafCategorias.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setCategoria(cat.id)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                      categoriaParam === cat.id
+                        ? "bg-brand-600 text-white shadow-sm"
+                        : "bg-white border border-surface-300 text-surface-600 hover:border-brand-400 hover:text-brand-600"
+                    }`}
+                  >
+                    {cat.nombre}
+                  </button>
+                ))}
+              </div>
+
+              {/* Degradado + flecha derecha */}
+              {chipScroll.right && (
+                <>
+                  <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-12 bg-gradient-to-l from-surface-50 to-transparent z-10" />
+                  <button
+                    type="button"
+                    aria-label="Ver más categorías"
+                    onClick={() => scrollChips(1)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white border border-surface-200 shadow-md flex items-center justify-center text-surface-600 hover:text-brand-600 hover:border-brand-300 transition cursor-pointer"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -581,10 +672,10 @@ export default function StorePage() {
             : "opacity-0 translate-y-3 pointer-events-none"
         }`}
       >
-        <span className="text-xl">🛒</span>
+        <span className="text-xl">{toastIcon}</span>
         <div>
           <p className="text-sm font-semibold leading-tight line-clamp-1 max-w-[200px]">{toast}</p>
-          <p className="text-xs text-surface-400">Agregado al carrito</p>
+          <p className="text-xs text-surface-400">{toastSub}</p>
         </div>
       </div>
 

@@ -33,6 +33,9 @@ export function useStoreCatalogoRealtime(enabled = true) {
       queryClient.invalidateQueries({ queryKey: ["productos"] });
       queryClient.invalidateQueries({ queryKey: ["productos-store"] });
       queryClient.invalidateQueries({ queryKey: ["productos-tienda"] });
+      // Las categorías también se refrescan en vivo (alta/baja/edición de categoría).
+      queryClient.invalidateQueries({ queryKey: ["categorias-store"] });
+      queryClient.invalidateQueries({ queryKey: ["categorias"] });
     };
 
     const connect = () => {
