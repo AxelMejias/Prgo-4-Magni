@@ -54,6 +54,7 @@ export const ingredienteApi = {
     if (filters.nombre) params.nombre = filters.nombre;
     if (filters.es_alergeno !== undefined) params.es_alergeno = filters.es_alergeno;
     if (filters.es_producto_terminado !== undefined) params.es_producto_terminado = filters.es_producto_terminado;
+    if (filters.stock_bajo !== undefined) params.stock_bajo = filters.stock_bajo;
     const { data } = await axiosClient.get("/api/v1/ingredientes/", { params });
     return data;
   },

@@ -47,6 +47,7 @@ export interface IngredienteFilters {
   nombre?: string;
   es_alergeno?: boolean;
   es_producto_terminado?: boolean;
+  stock_bajo?: boolean;
   page: number;
   size: number;
 }

@@ -34,6 +34,11 @@ export interface ResumenData {
   ventas_mes: number | string;
 }
 
+export interface AlertasStockData {
+  ingredientes_stock_bajo: number;
+  productos_sin_stock: number;
+}
+
 export type Agrupacion = "day" | "week" | "month";
 
 export const estadisticasApi = {
@@ -70,4 +75,8 @@ export const estadisticasApi = {
   // GET /estadisticas/resumen — KPI cards.
   getResumen: (): Promise<ResumenData> =>
     axiosClient.get("/api/v1/estadisticas/resumen").then((r) => r.data),
+
+  // GET /estadisticas/alertas-stock — avisos de reposición para el dashboard.
+  getAlertasStock: (): Promise<AlertasStockData> =>
+    axiosClient.get("/api/v1/estadisticas/alertas-stock").then((r) => r.data),
 };

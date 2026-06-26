@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -61,6 +62,14 @@ export default function DashboardPage() {
   const estadosQ = useQuery({
     queryKey: ["est-pedidos-por-estado"],
     queryFn: () => estadisticasApi.getPedidosPorEstado(),
+  });
+
+  // Avisos de reposición — independientes del período. Se refrescan cada minuto
+  // por si cambia el stock mientras el dashboard está abierto.
+  const alertasQ = useQuery({
+    queryKey: ["est-alertas-stock"],
+    queryFn: () => estadisticasApi.getAlertasStock(),
+    refetchInterval: 60_000,
   });
 
   // Gráficos dependientes del período seleccionado.
@@ -151,6 +160,52 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Avisos de reposición (stock bajo / sin stock) ─────────────────── */}
+      {alertasQ.data && (alertasQ.data.ingredientes_stock_bajo > 0 || alertasQ.data.productos_sin_stock > 0) && (
+        <div className="rounded-2xl border border-warning-200 bg-warning-50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🔔</span>
+            <h2 className="font-bold text-warning-800 text-sm">Avisos de stock</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {alertasQ.data.ingredientes_stock_bajo > 0 && (
+              <Link
+                to="/ingredientes?stock_bajo=true"
+                className="group flex items-center justify-between gap-3 bg-white border border-warning-200 rounded-xl px-4 py-3 hover:border-warning-400 hover:shadow-sm transition"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 rounded-lg bg-warning-100 flex items-center justify-center text-lg shrink-0">🧂</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-surface-800">
+                      {alertasQ.data.ingredientes_stock_bajo} ingrediente{alertasQ.data.ingredientes_stock_bajo !== 1 ? "s" : ""} bajo el mínimo
+                    </p>
+                    <p className="text-xs text-surface-500">Stock en o por debajo del mínimo definido.</p>
+                  </div>
+                </div>
+                <span className="text-warning-600 text-sm font-semibold group-hover:translate-x-0.5 transition shrink-0">Ver →</span>
+              </Link>
+            )}
+            {alertasQ.data.productos_sin_stock > 0 && (
+              <Link
+                to="/productos?con_stock=false"
+                className="group flex items-center justify-between gap-3 bg-white border border-danger-200 rounded-xl px-4 py-3 hover:border-danger-400 hover:shadow-sm transition"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 rounded-lg bg-danger-100 flex items-center justify-center text-lg shrink-0">📦</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-surface-800">
+                      {alertasQ.data.productos_sin_stock} producto{alertasQ.data.productos_sin_stock !== 1 ? "s" : ""} sin stock
+                    </p>
+                    <p className="text-xs text-surface-500">No se pueden producir por falta de insumos.</p>
+                  </div>
+                </div>
+                <span className="text-danger-600 text-sm font-semibold group-hover:translate-x-0.5 transition shrink-0">Ver →</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Fila 2: KPI cards (GET /estadisticas/resumen) ─────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

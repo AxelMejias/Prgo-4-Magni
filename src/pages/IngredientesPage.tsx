@@ -12,7 +12,7 @@ import { useCatalogoRealtime } from "../shared/hooks/useCatalogoRealtime";
 
 type Tab = "activos" | "inactivos";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 export default function IngredientesPage() {
   const queryClient = useQueryClient();
@@ -31,6 +31,9 @@ export default function IngredientesPage() {
   const esProductoTerminadoRaw = searchParams.get("es_producto_terminado");
   const esProductoTerminado: boolean | undefined =
     esProductoTerminadoRaw === "true" ? true : esProductoTerminadoRaw === "false" ? false : undefined;
+  // Filtro "stock bajo" — lo dispara el aviso del dashboard (?stock_bajo=true).
+  const stockBajo: boolean | undefined =
+    searchParams.get("stock_bajo") === "true" ? true : undefined;
 
   const [nombreInput, setNombreInput] = useState(nombreParam);
 
@@ -40,6 +43,7 @@ export default function IngredientesPage() {
     nombre: nombreParam || undefined,
     es_alergeno: esAlergeno,
     es_producto_terminado: esProductoTerminado,
+    stock_bajo: stockBajo,
   };
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -182,6 +186,15 @@ export default function IngredientesPage() {
     });
   }
 
+  function handleClearStockBajo() {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.delete("stock_bajo");
+      params.set("page", "1");
+      return params;
+    });
+  }
+
   function handleResetFilters() {
     setNombreInput("");
     setSearchParams({ tab: "activos", page: "1" });
@@ -296,6 +309,21 @@ export default function IngredientesPage() {
             isImporting={isImporting}
             onDescargarPlantilla={handleDescargarPlantilla}
           />
+
+          {stockBajo && (
+            <div className="mb-4 flex items-center justify-between gap-3 bg-warning-50 border border-warning-200 rounded-xl px-4 py-2.5">
+              <span className="text-sm font-semibold text-warning-700 flex items-center gap-2">
+                ⚠️ Mostrando solo ingredientes en o por debajo del stock mínimo
+                {data && <span className="text-warning-600 font-bold">({data.total})</span>}
+              </span>
+              <button
+                onClick={handleClearStockBajo}
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-warning-300 text-warning-700 text-xs font-semibold hover:bg-warning-100 transition cursor-pointer"
+              >
+                Ver todos
+              </button>
+            </div>
+          )}
 
           {isLoading && (
             <div className="bg-white rounded-xl border border-surface-200 p-16 text-center">
